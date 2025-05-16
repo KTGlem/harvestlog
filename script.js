@@ -1,5 +1,5 @@
 ﻿// Replace with your published Google Sheet endpoint or Apps Script endpoint for task data
-const SHEET_DATA_URL = "YOUR_SHEET_JSON_OR_CSV_ENDPOINT";
+const SHEET_DATA_URL = "https://docs.google.com/spreadsheets/d/1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g/gviz/tq?tqx=out:csv";
 const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzC1h8Yk2fRo0_G19CW83r3IB-HjA8oHSOOV3PhllS_7CfdaKbgtaamOidFwEfDDkX/exec";
 
 
