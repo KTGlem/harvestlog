@@ -1,6 +1,6 @@
 ﻿// Replace with your published Google Sheet endpoint or Apps Script endpoint for task data
 const SHEET_DATA_URL = "YOUR_SHEET_JSON_OR_CSV_ENDPOINT";
-const SHEET_WEB_APP_URL = "YOUR_APPS_SCRIPT_WEBHOOK_URL";
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzC1h8Yk2fRo0_G19CW83r3IB-HjA8oHSOOV3PhllS_7CfdaKbgtaamOidFwEfDDkX/exec";
 
 
 async function loadTasks() {
