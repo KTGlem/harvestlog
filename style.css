@@ -1,0 +1,71 @@
+﻿body {
+  font-family: sans-serif;
+  margin: 1em;
+  background: #f8f8f8;
+}
+
+
+h1 {
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+
+.task-card {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 1em;
+  border-radius: 8px;
+  margin-bottom: 1em;
+}
+
+
+.task-card.done {
+  opacity: 0.6;
+  border-left: 5px solid green;
+}
+
+
+.detail-form {
+  position: fixed;
+  top: 10%;
+  left: 5%;
+  right: 5%;
+  background: #fff;
+  border: 2px solid #333;
+  border-radius: 10px;
+  padding: 1em;
+  z-index: 1000;
+  max-height: 80%;
+  overflow-y: auto;
+}
+
+
+label {
+  margin-top: 0.5em;
+  display: block;
+}
+
+
+input, textarea {
+  width: 100%;
+  padding: 0.4em;
+  margin-bottom: 0.5em;
+}
+
+
+button {
+  padding: 0.5em 1em;
+  margin-top: 0.5em;
+  margin-right: 0.5em;
+  font-weight: bold;
+  border: none;
+  background: #2c7;
+  color: #fff;
+  border-radius: 4px;
+}
+
+
+button[type="button"] {
+  background: #aaa;
+}
