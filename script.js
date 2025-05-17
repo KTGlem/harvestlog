@@ -5,6 +5,16 @@ const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcT
 let currentRow = null;
 let allTasks = [];
 
+function normalizeDate(d) {
+  if (!d) return '';
+  return d.trim()
+          .replace(/["']/g, '')
+          .replace(/\r/g, '') // strip carriage returns
+          .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (_, m, d, y) =>
+            `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+          );
+}
+
 function renderTasks(tasks) {
   const container = document.getElementById('task-list');
   container.innerHTML = '';
@@ -70,13 +80,14 @@ document.getElementById('submit-btn').onclick = () => {
   }).then(() => location.reload());
 };
 
-document.getElementById('date-selector').addEventListener('change', e => {
+document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
   console.log('User selected date:', selected);
-  const filteredTasks = allTasks.filter(task => task['Harvest Date'] === selected);
-  console.log('Filtered tasks:', filteredTasks);
-  renderTasks(filteredTasks);
+  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
+  console.log('Filtered tasks:', filtered);
+  renderTasks(filtered);
 });
+
 
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
@@ -92,5 +103,5 @@ fetch(SHEET_DATA_URL)
 
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
-    renderTasks(allTasks.filter(task => task['Harvest Date'] === today));
+    renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === todayStr));
   });
