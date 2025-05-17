@@ -5,9 +5,10 @@ let currentRow = null;
 let allTasks = [];
 
 function normalizeDate(d) {
-  const parsed = new Date(d);
-  if (isNaN(parsed)) return null;
-  return parsed.toISOString().slice(0, 10); // YYYY-MM-DD
+  if (!d) return '';
+  return d.trim().replace(/["']/g, '').replace(/^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/, (_, m, d, y) =>
+    `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  );
 }
 
 function formatDateInput(date) {
