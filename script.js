@@ -1,24 +1,39 @@
-
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3QUa3Kjzoj1gDbv8kfbhAf8JSQzuzNe5JgozY8Rk0VfF12zrwkhAo25-4mtgy2B0uM6Rfgctu-VLo/pub?gid=0&single=true&output=csv';
 const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcTcygtJilOPpQU5RNSzBYYxhx-Iuhy6ibELqqJ-r1UEX-bREzQRP/exec';
 
 let currentRow = null;
+let allTasks = [];
+
+function formatDateInput(date) {
+  const d = new Date(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+document.getElementById('date-selector').addEventListener('change', (e) => {
+  const selected = e.target.value;
+  renderTasks(allTasks.filter(row => row['Harvest Date'] === selected));
+});
 
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
   .then(csv => {
     const rows = csv.split('\n').map(row => row.split(','));
     const headers = rows.shift();
-    const tasks = rows
+    allTasks = rows
       .map((row, i) => {
         const data = {};
         headers.forEach((h, j) => data[h.trim()] = row[j] ? row[j].trim() : '');
         data._row = i + 2;
         return data;
       })
-      .filter(row => row['Harvest Date'] === new Date().toISOString().slice(0, 10) && row['Units to Harvest']);
+      .filter(row => row['Units to Harvest']);
 
-    renderTasks(tasks);
+    const todayStr = formatDateInput(new Date());
+    document.getElementById('date-selector').value = todayStr;
+    renderTasks(allTasks.filter(row => row['Harvest Date'] === todayStr));
   });
 
 function renderTasks(tasks) {
