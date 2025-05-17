@@ -1,5 +1,4 @@
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPl9J0QSFs7YEzakOPutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-
 const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcTcygtJilOPpQU5RNSzBYYxhx-Iuhy6ibELqqJ-r1UEX-bREzQRP/exec';
 
 let currentRow = null;
@@ -25,10 +24,12 @@ function formatDateInput(date) {
 
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
+  const filteredTasks = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
   console.log('Date selected by user:', selected);
-  renderTasks(allTasks.filter(row => row['Harvest Date'] === selected));
-  console.log('Tasks matching selected date:', filtered);
+  console.log('Tasks matching selected date:', filteredTasks);
+  renderTasks(filteredTasks);
 });
+
 
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
