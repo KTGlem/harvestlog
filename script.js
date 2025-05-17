@@ -24,11 +24,12 @@ function formatDateInput(date) {
 
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
-  const filteredTasks = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
   console.log('Date selected by user:', selected);
-  console.log('Tasks matching selected date:', filteredTasks);
-  renderTasks(filteredTasks);
+  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
+  console.log('Tasks matching selected date:', filtered);
+  renderTasks(filtered);
 });
+
 
 
 fetch(SHEET_DATA_URL)
