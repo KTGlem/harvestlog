@@ -1,14 +1,35 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+
+<!DOCTYPE html>
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HarvestLog - Field Crew</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Harvest Log</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Today's Harvest Tasks</h1>
   <div id="task-list"></div>
+
+  <div id="detail-form" class="detail-form" style="display:none;">
+    <h2 id="detail-title"></h2>
+    <p><strong>Location:</strong> <span id="detail-location"></span></p>
+    <p><strong>Sales Channel:</strong> <span id="detail-channel"></span></p>
+    <p><strong>Total Quantity:</strong> <span id="detail-quantity"></span></p>
+    <div id="sales-breakdown" class="sales-breakdown"></div>
+    <label>Assignee(s)</label>
+    <input id="assignee" placeholder="e.g., Glen, Erika" />
+    <label>Time to Harvest (mins)</label>
+    <input id="harvestTime" type="number" />
+    <label>Total Harvest Weight (kg)</label>
+    <input id="weight" type="number" />
+    <label>Time to Wash & Pack (mins)</label>
+    <input id="washPackTime" type="number" />
+    <label>Field Crew Notes</label>
+    <textarea id="notes" placeholder="Optional observations..."></textarea>
+    <button id="submit-btn">Completed</button>
+    <button type="button" onclick="closeForm()">Cancel</button>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
