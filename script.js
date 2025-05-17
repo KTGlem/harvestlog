@@ -1,4 +1,4 @@
-const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g/export?format=csv&id=1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g&gid=0';
+const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPl9J0QSFs7YEzakOPutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?output=csv';
 const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcTcygtJilOPpQU5RNSzBYYxhx-Iuhy6ibELqqJ-r1UEX-bREzQRP/exec';
 
 let currentRow = null;
