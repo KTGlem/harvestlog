@@ -4,56 +4,6 @@ const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcT
 let currentRow = null;
 let allTasks = [];
 
-function normalizeDate(d) {
-  if (!d) return '';
-  return d.trim()
-          .replace(/["']/g, '')
-          .replace(/\r/g, '') // Strip carriage return
-          .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (_, m, d, y) =>
-            `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-          );
-}
-
-function formatDateInput(date) {
-  const d = new Date(date);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-document.getElementById('date-selector').addEventListener('change', (e) => {
-  const selected = e.target.value;
-  console.log('Date selected by user:', selected);
-  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
-  console.log('Tasks matching selected date:', filtered);
-  renderTasks(filtered);
-});
-
-
-
-fetch(SHEET_DATA_URL)
-  .then(res => res.text())
-  .then(csv => {
-    const rows = csv.split('\n').map(row => row.split(','));
-    const headers = rows.shift();
-    allTasks = rows
-      .map((row, i) => {
-        const data = {};
-        headers.forEach((h, j) => data[h.trim()] = row[j] ? row[j].trim() : '');
-        data._row = i + 2;
-        return data;
-      })
-      .filter(row => row['Units to Harvest']);
-
-    // ✅ Log all harvest dates in the dataset
-    console.log('All Harvest Dates:', allTasks.map(t => t['Harvest Date']));
-    
-    const todayStr = new Date().toISOString().split('T')[0];
-    document.getElementById('date-selector').value = todayStr;
-    renderTasks(allTasks.filter(row => row['Harvest Date'] === todayStr));
-  });
-
 function renderTasks(tasks) {
   const container = document.getElementById('task-list');
   container.innerHTML = '';
@@ -75,9 +25,9 @@ function renderTasks(tasks) {
 function openForm(task) {
   currentRow = task;
   document.getElementById('detail-title').innerText = task['Crop'];
-  document.getElementById('detail-location').innerText = task['Location'];
+  document.getElementById('detail-location').innerText = task['Location'] || '-';
   document.getElementById('detail-channel').innerText = task['Harvest Date'];
-  document.getElementById('detail-quantity').innerText = task['Units to Harvest'] + ' ' + task['Harvest Units'];
+  document.getElementById('detail-quantity').innerText = `${task['Units to Harvest']} ${task['Harvest Units']}`;
 
   const breakdown = document.getElementById('sales-breakdown');
   breakdown.innerHTML = `
@@ -118,3 +68,28 @@ document.getElementById('submit-btn').onclick = () => {
     headers: { 'Content-Type': 'application/json' }
   }).then(() => location.reload());
 };
+
+document.getElementById('date-selector').addEventListener('change', e => {
+  const selected = e.target.value;
+  console.log('User selected date:', selected);
+  const filteredTasks = allTasks.filter(task => task['Harvest Date'] === selected);
+  console.log('Filtered tasks:', filteredTasks);
+  renderTasks(filteredTasks);
+});
+
+fetch(SHEET_DATA_URL)
+  .then(res => res.text())
+  .then(csv => {
+    const rows = csv.split('\n').map(row => row.split(','));
+    const headers = rows.shift();
+    allTasks = rows.map((row, i) => {
+      const obj = {};
+      headers.forEach((h, j) => obj[h.trim()] = row[j] ? row[j].trim() : '');
+      obj._row = i + 2;
+      return obj;
+    }).filter(row => row['Units to Harvest']);
+
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('date-selector').value = today;
+    renderTasks(allTasks.filter(task => task['Harvest Date'] === today));
+  });
