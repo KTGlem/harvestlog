@@ -1,39 +1,38 @@
-const SHEET_DATA_URL = "https://docs.google.com/spreadsheets/d/1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g/gviz/tq?tqx=out:csv";
-const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyzC1h8Yk2fRo0_G19CW83r3IB-HjA8oHSOOV3PhllS_7CfdaKbgtaamOidFwEfDDkX/exec";
 
-async function loadTasks() {
-  const res = await fetch(SHEET_DATA_URL);
-  const raw = await res.text();
-  const rows = raw.split("\n").slice(1).filter(r => r.trim() !== "").map(r => r.split(","));
+const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3QUa3Kjzoj1gDbv8kfbhAf8JSQzuzNe5JgozY8Rk0VfF12zrwkhAo25-4mtgy2B0uM6Rfgctu-VLo/pub?gid=0&single=true&output=csv';
+const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcTcygtJilOPpQU5RNSzBYYxhx-Iuhy6ibELqqJ-r1UEX-bREzQRP/exec';
 
-  const tasks = rows
-    .map(row => ({
-      crop: row[0].replace(/"/g, ''),
-      location: row[13].replace(/"/g, ''),
-      quantity: row[17].replace(/"/g, ''),
-      units: row[18].replace(/"/g, ''),
-      clearBed: row[19].replace(/"/g, '') === 'Y',
-      assignees: row[20].replace(/"/g, ''),
-      salesChannel: row[15].replace(/"/g, ''),
-      id: `${row[0]}_${row[13]}`
-    }))
-    .filter(task => task.quantity)  // only show tasks with units to harvest
-    .sort((a, b) => a.crop.localeCompare(b.crop));
+let currentRow = null;
 
-  renderTaskList(tasks);
-}
+fetch(SHEET_DATA_URL)
+  .then(res => res.text())
+  .then(csv => {
+    const rows = csv.split('\n').map(row => row.split(','));
+    const headers = rows.shift();
+    const tasks = rows
+      .map((row, i) => {
+        const data = {};
+        headers.forEach((h, j) => data[h.trim()] = row[j] ? row[j].trim() : '');
+        data._row = i + 2;
+        return data;
+      })
+      .filter(row => row['Harvest Date'] === new Date().toISOString().slice(0, 10) && row['Units to Harvest']);
 
-function renderTaskList(tasks) {
-  const container = document.getElementById("task-list");
-  container.innerHTML = "";
+    renderTasks(tasks);
+  });
+
+function renderTasks(tasks) {
+  const container = document.getElementById('task-list');
+  container.innerHTML = '';
+
   tasks.forEach(task => {
-    const div = document.createElement("div");
-    div.className = `task-card`;
+    const div = document.createElement('div');
+    div.className = 'task-card';
     div.innerHTML = `
-      <h3>${task.crop}</h3>
-      <p><strong>Location:</strong> ${task.location}</p>
-      <p><strong>${task.clearBed ? 'Clear Bed' : 'Quantity'}:</strong> ${task.clearBed ? 'YES — harvest all' : task.quantity + ' ' + task.units}</p>
-      <p><strong>Assigned To:</strong> ${task.assignees || 'Unassigned'}</p>
+      <strong>${task['Crop']}</strong><br>
+      <strong>Location:</strong> ${task['Location'] || '-'}<br>
+      <strong>Quantity:</strong> ${task['Units to Harvest']} ${task['Harvest Units']}<br>
+      <strong>Assigned To:</strong> ${task['Assignee(s)'] || 'Unassigned'}<br>
       <button onclick='openForm(${JSON.stringify(task)})'>Open</button>
     `;
     container.appendChild(div);
@@ -41,55 +40,48 @@ function renderTaskList(tasks) {
 }
 
 function openForm(task) {
-  const form = document.createElement("div");
-  form.className = "detail-form";
-  form.innerHTML = `
-    <h2>${task.crop}</h2>
-    <p><strong>Location:</strong> ${task.location}</p>
-    <p><strong>Sales Channel:</strong> ${task.salesChannel}</p>
-    <p><strong>${task.clearBed ? 'Clear Bed' : 'Quantity'}:</strong> ${task.clearBed ? 'YES — harvest all' : task.quantity + ' ' + task.units}</p>
-    <form onsubmit="submitForm(event, '${task.id}')">
-      <label>Assignee(s)</label>
-      <input name="assignee" required placeholder="e.g., Glen, Erika" />
-      <label>Time to Harvest (mins)</label>
-      <input name="harvestTime" type="number" required />
-      <label>Total Harvest Weight (kg)</label>
-      <input name="weight" type="number" step="0.1" required />
-      <label>Time to Wash & Pack (mins)</label>
-      <input name="washTime" type="number" required />
-      <label>Field Crew Notes</label>
-      <textarea name="notes" placeholder="Optional observations..."></textarea>
-      <button type="submit">Completed</button>
-      <button type="button" onclick="this.parentNode.parentNode.remove()">Cancel</button>
-    </form>
+  currentRow = task;
+  document.getElementById('detail-title').innerText = task['Crop'];
+  document.getElementById('detail-location').innerText = task['Location'];
+  document.getElementById('detail-channel').innerText = task['Harvest Date'];
+  document.getElementById('detail-quantity').innerText = task['Units to Harvest'] + ' ' + task['Harvest Units'];
+
+  const breakdown = document.getElementById('sales-breakdown');
+  breakdown.innerHTML = `
+    <strong>Sales Breakdown:</strong>
+    <span>CSA: ${task['CSA'] || 0}</span>
+    <span>Parkdale Bins: ${task['Parkdale Bins'] || 0}</span>
+    <span>Cobourg Farmers Market: ${task['Cobourg Farmers Market'] || 0}</span>
+    <span>Kitchen: ${task['Kitchen'] || 0}</span>
+    <span>Online: ${task['Online'] || 0}</span>
   `;
-  document.body.appendChild(form);
+
+  document.getElementById('assignee').value = task['Assignee(s)'] || '';
+  document.getElementById('harvestTime').value = '';
+  document.getElementById('weight').value = '';
+  document.getElementById('washPackTime').value = '';
+  document.getElementById('notes').value = '';
+
+  document.getElementById('detail-form').style.display = 'block';
 }
 
-function submitForm(e, id) {
-  e.preventDefault();
-  const form = e.target;
-  const data = {
-    id,
-    assignee: form.assignee.value,
-    harvestTime: form.harvestTime.value,
-    weight: form.weight.value,
-    washPackTime: form.washTime.value,
-    notes: form.notes.value
+function closeForm() {
+  document.getElementById('detail-form').style.display = 'none';
+}
+
+document.getElementById('submit-btn').onclick = () => {
+  const body = {
+    id: currentRow._row,
+    assignee: document.getElementById('assignee').value,
+    harvestTime: document.getElementById('harvestTime').value,
+    weight: document.getElementById('weight').value,
+    washPackTime: document.getElementById('washPackTime').value,
+    notes: document.getElementById('notes').value,
   };
 
-  fetch(SHEET_WEB_APP_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data)
-  })
-    .then(res => res.text())
-    .then(() => {
-      alert("Submitted!");
-      form.parentNode.remove();
-      loadTasks();  // Refresh the list
-    })
-    .catch(err => alert("Error submitting: " + err));
-}
-
-loadTasks();
+  fetch(FORM_POST_URL, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' }
+  }).then(() => location.reload());
+};
