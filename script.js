@@ -4,6 +4,12 @@ const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcT
 let currentRow = null;
 let allTasks = [];
 
+function normalizeDate(d) {
+  const parsed = new Date(d);
+  if (isNaN(parsed)) return null;
+  return parsed.toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
 function formatDateInput(date) {
   const d = new Date(date);
   const yyyy = d.getFullYear();
@@ -14,7 +20,7 @@ function formatDateInput(date) {
 
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
-  renderTasks(allTasks.filter(row => row['Harvest Date'] === selected));
+  renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected));
 });
 
 fetch(SHEET_DATA_URL)
@@ -33,7 +39,7 @@ fetch(SHEET_DATA_URL)
 
     const todayStr = formatDateInput(new Date());
     document.getElementById('date-selector').value = todayStr;
-    renderTasks(allTasks.filter(row => row['Harvest Date'] === todayStr));
+    renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === todayStr));
   });
 
 function renderTasks(tasks) {
