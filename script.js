@@ -21,7 +21,7 @@ function formatDateInput(date) {
 
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
-  renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected));
+  renderTasks(allTasks.filter(row => row['Harvest Date'] === selected));
 });
 
 fetch(SHEET_DATA_URL)
@@ -38,9 +38,9 @@ fetch(SHEET_DATA_URL)
       })
       .filter(row => row['Units to Harvest']);
 
-    const todayStr = formatDateInput(new Date());
+    const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = todayStr;
-    renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === todayStr));
+    renderTasks(allTasks.filter(row => row['Harvest Date'] === todayStr));
   });
 
 function renderTasks(tasks) {
