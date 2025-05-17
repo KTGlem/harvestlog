@@ -6,9 +6,12 @@ let allTasks = [];
 
 function normalizeDate(d) {
   if (!d) return '';
-  return d.trim().replace(/["']/g, '').replace(/^([0-9]{1,2})\/([0-9]{1,2})\/([0-9]{4})$/, (_, m, d, y) =>
-    `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  );
+  return d.trim()
+          .replace(/["']/g, '')
+          .replace(/\r/g, '') // Strip carriage return
+          .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (_, m, d, y) =>
+            `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+          );
 }
 
 function formatDateInput(date) {
