@@ -96,12 +96,18 @@ fetch(SHEET_DATA_URL)
     const headers = rows.shift();
     allTasks = rows.map((row, i) => {
       const obj = {};
-      headers.forEach((h, j) => obj[h.trim()] = row[j] ? row[j].trim() : '');
+      headers.forEach((h, j) => {
+        const key = h.trim();
+        let value = row[j] ? row[j].trim() : '';
+        if (key === 'Harvest Date') value = normalizeDate(value);
+        obj[key] = value;
+      });
       obj._row = i + 2;
       return obj;
     }).filter(row => row['Units to Harvest']);
 
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
-    renderTasks(allTasks.filter(row => normalizeDate(row['Harvest Date']) === todayStr));
+    renderTasks(allTasks.filter(row => row['Harvest Date'] === today));
   });
+
