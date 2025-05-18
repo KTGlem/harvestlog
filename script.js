@@ -162,27 +162,30 @@ fetch(SHEET_DATA_URL)
   });
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Bind Submit button
-  document.getElementById('submit-btn').onclick = () => {
-    const body = {
-      id: currentRow._row,
-      assignee: document.getElementById('assignee').value,
-      harvestTime: document.getElementById('harvestTime').value,
-      weight: document.getElementById('weight').value,
-      washPackTime: document.getElementById('washPackTime').value,
-      notes: document.getElementById('notes').value,
-    };
+  const submit = document.getElementById('submit-btn');
+  if (submit) {
+    submit.addEventListener('click', () => {
+      const body = {
+        id: currentRow._row,
+        assignee: document.getElementById('assignee').value,
+        harvestTime: document.getElementById('harvestTime').value,
+        weight: document.getElementById('weight').value,
+        washPackTime: document.getElementById('washPackTime').value,
+        notes: document.getElementById('notes').value,
+      };
 
-    fetch(FORM_POST_URL, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: { 'Content-Type': 'application/json' }
-    }).then(() => location.reload());
-  };
+      fetch(FORM_POST_URL, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => location.reload());
+    });
+  }
 
-  // Bind Cancel button
-  const cancelButton = document.querySelector('button[onclick="closeForm()"]');
-  if (cancelButton) {
-    cancelButton.addEventListener('click', closeForm);
+  // Make Cancel button work
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', closeForm);
   }
 });
+
