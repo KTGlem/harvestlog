@@ -106,6 +106,10 @@ fetch(SHEET_DATA_URL)
       obj._row = i + 2;
       return obj;
     }).filter(row => row['Units to Harvest']);
+    
+    console.log('Parsed Harvest Dates:', allTasks.map(t => t['Harvest Date']));
+    console.log('Parsed Locations:', allTasks.map(t => t['Location']));
+
 
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
