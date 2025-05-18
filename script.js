@@ -20,6 +20,8 @@ function renderTasks(tasks) {
   container.innerHTML = '';
 
   console.log(`Rendering ${tasks.length} tasks`);
+  console.log(`Rendering: ${task['Crop']} | Location: ${task['Location']} | Units: ${task['Units to Harvest']}`);
+
 
   tasks.forEach(task => {
     const div = document.createElement('div');
