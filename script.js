@@ -68,23 +68,6 @@ function closeForm() {
   document.getElementById('detail-form').style.display = 'none';
 }
 
-document.getElementById('submit-btn').onclick = () => {
-  const body = {
-    id: currentRow._row,
-    assignee: document.getElementById('assignee').value,
-    harvestTime: document.getElementById('harvestTime').value,
-    weight: document.getElementById('weight').value,
-    washPackTime: document.getElementById('washPackTime').value,
-    notes: document.getElementById('notes').value,
-  };
-
-  fetch(FORM_POST_URL, {
-    method: 'POST',
-    body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' }
-  }).then(() => location.reload());
-};
-
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
   console.log('User selected date:', selected);
@@ -96,14 +79,9 @@ document.getElementById('date-selector').addEventListener('change', (e) => {
     console.log(`Including task: ${t['Crop']} | Locations: ${t._parsedLocations?.join(', ')}`);
   });
 
-
-});
-
-
   console.log('Filtered tasks:', filtered);
   renderTasks(filtered);
 });
-
 
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
