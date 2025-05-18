@@ -13,11 +13,20 @@
   <div id="detail-form" class="detail-form" style="display:none;">
     <h2 id="detail-title"></h2>
     <p><strong>Location:</strong> <span id="detail-location"></span></p>
-    <p><strong>Sales Channel:</strong> <span id="detail-channel"></span></p>
     <p><strong>Total Quantity:</strong> <span id="detail-quantity"></span></p>
     <div id="sales-breakdown" class="sales-breakdown"></div>
     <label>Assignee(s)</label>
-    <input id="assignee" placeholder="e.g., Glen, Erika" />
+    <select id="assignee">
+      <option value="">-- Select --</option>
+      <option>Anabel</option>
+      <option>Hailey</option>
+      <option>Stephanie</option>
+      <option>Glen</option>
+      <option>Ashley</option>
+      <option>Kelsey</option>
+      <option>Jeff</option>
+      <option>Other</option>
+    </select>
     <label>Time to Harvest (mins)</label>
     <input id="harvestTime" type="number" />
     <label>Total Harvest Weight (kg)</label>
