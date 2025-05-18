@@ -95,8 +95,28 @@ fetch(SHEET_DATA_URL)
   .then(res => res.text())
   .then(csv => {
     const rows = csv.trim().split('\n').map(row => {
-      const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
-      return [...row.matchAll(regex)].map(m => m[0].replace(/^"|"$/g, ''));
+      const cells = [];
+      let inQuotes = false;
+      let value = '';
+    
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        const nextChar = row[i + 1];
+    
+        if (char === '"' && inQuotes && nextChar === '"') {
+          value += '"';
+          i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(value);
+          value = '';
+        } else {
+          value += char;
+        }
+      }
+      cells.push(value);
+      return cells.map(c => c.trim());
     });
 
     const headers = rows.shift();
