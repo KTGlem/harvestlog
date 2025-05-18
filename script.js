@@ -4,6 +4,7 @@ const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzG5INeK0qXakzJcT
 
 let currentRow = null;
 let allTasks = [];
+let taskMap = {};
 
 function normalizeDate(d) {
   if (!d) return '';
@@ -155,8 +156,6 @@ fetch(SHEET_DATA_URL)
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
     renderTasks(allTasks.filter(row => row['Harvest Date'] === today));
-    const taskMap = {};
-    allTasks.forEach(t => taskMap[t._row] = t);
 
   });
 
