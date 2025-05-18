@@ -31,13 +31,14 @@ function renderTasks(tasks) {
       <strong>Location:</strong> ${task['Location'] || '-'}<br>
       <strong>Quantity:</strong> ${task['Units to Harvest']} ${task['Harvest Units']}<br>
       <strong>Assigned To:</strong> ${task['Assignee(s)'] || 'Unassigned'}<br>
-      <button onclick='openForm(${JSON.stringify(task)})'>Open</button>
+      <button onclick='openForm(${task._row})'>Open</button>
     `;
     container.appendChild(div);
   });
 }
 
-function openForm(task) {
+function openForm(rowId) {
+  const task = taskMap[rowId];
   currentRow = task;
   document.getElementById('detail-title').innerText = task['Crop'];
   document.getElementById('detail-location').innerText = task['Location'] || '-';
@@ -154,5 +155,8 @@ fetch(SHEET_DATA_URL)
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
     renderTasks(allTasks.filter(row => row['Harvest Date'] === today));
+    const taskMap = {};
+    allTasks.forEach(t => taskMap[t._row] = t);
+
   });
 
