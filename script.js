@@ -89,12 +89,11 @@ document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
   console.log('User selected date:', selected);
   const filtered = allTasks.filter(row => {
-  
-  // Debug: Show which tasks are being rendered
+  return normalizeDate(row['Harvest Date']) === selected;
+      // Debug: Show which tasks are being rendered
   filtered.forEach(t => {
     console.log(`Including task: ${t['Crop']} | Locations: ${t._parsedLocations?.join(', ')}`);
   });
-  return normalizeDate(row['Harvest Date']) === selected;
 });
 
   console.log('Filtered tasks:', filtered);
