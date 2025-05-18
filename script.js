@@ -138,11 +138,12 @@ fetch(SHEET_DATA_URL)
       
       // Log each row with visibility into Units to Harvest
       if (obj['Harvest Date'] === '2025-05-15') {
-        console.log(`Row ${i + 2} | Crop: ${obj['Crop']} | Units: '${obj['Units to Harvest']}'`);
+        console.log(`Row ${i + 2} | Crop: ${obj['Crop']} | Units: '${obj['Units to Harvest']}' | Type: ${typeof obj['Units to Harvest']}`);
       }
 
       return obj;
-    }).filter(row => row['Crop'] && row['Harvest Date'] && row['Units to Harvest']);
+    }).filter(row => row['Crop'] && row['Harvest Date'] && !isNaN(parseFloat(row['Units to Harvest'])) && parseFloat(row['Units to Harvest']) > 0
+    );
     
     console.log('Parsed Harvest Dates:', allTasks.map(t => t['Harvest Date']));
     console.log('Parsed Locations:', allTasks.map(t => t['Location']));
