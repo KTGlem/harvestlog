@@ -98,10 +98,11 @@ fetch(SHEET_DATA_URL)
       const obj = {};
       headers.forEach((h, j) => {
         const key = h.trim();
-        let value = row[j] ? row[j].trim() : '';
+        let value = row[j] ? row[j].trim().replace(/\r/g, '') : '';
         if (key === 'Harvest Date') value = normalizeDate(value);
         obj[key] = value;
-      });
+    });
+
       obj._row = i + 2;
       return obj;
     }).filter(row => row['Units to Harvest']);
