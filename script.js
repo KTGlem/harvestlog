@@ -36,7 +36,7 @@ function renderTasks(tasks) {
       <strong>Location:</strong> ${task['Location'] || '-'}<br>
       <strong>Quantity:</strong> ${task['Units to Harvest']} ${task['Harvest Units']}<br>
       <strong>Assigned To:</strong> ${task['Assignee(s)'] || 'Unassigned'}<br>
-      <button onclick='openForm(${task._row || 0})'>Open</button>
+      <button onclick="openForm(${task._row || 0})">Open</button>
     `;
     container.appendChild(div);
   });
@@ -47,7 +47,7 @@ function renderTasks(tasks) {
 // --------------------
 function openForm(rowId) {
   const task = taskMap[rowId];
-  if (!task) return; // safety check
+  if (!task) return;
 
   currentRow = task;
   document.getElementById('detail-title').innerText = task['Crop'];
@@ -78,21 +78,11 @@ function closeForm() {
 }
 
 // --------------------
-// INTERACTION: DATE SELECTION
-// --------------------
-document.getElementById('date-selector').addEventListener('change', (e) => {
-  const selected = e.target.value;
-  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
-  renderTasks(filtered);
-});
-
-// --------------------
 // DATA FETCH & PARSE
 // --------------------
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
   .then(csv => {
-    // Parse CSV safely even with quoted commas
     const rows = csv.trim().split('\n').map(row => {
       const cells = [];
       let inQuotes = false, value = '';
@@ -139,7 +129,7 @@ fetch(SHEET_DATA_URL)
         }
       });
 
-      obj._row = i + 2; // use 1-based row index for logging & edits
+      obj._row = i + 2;
       return obj;
     })
     .filter(row =>
@@ -149,22 +139,35 @@ fetch(SHEET_DATA_URL)
       parseFloat(row['Units to Harvest']) > 0
     );
 
-    // Build lookup map for detail view access
     taskMap = {};
     allTasks.forEach(t => {
       taskMap[t._row] = t;
     });
-
-    // Set default date (today) and render
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('date-selector').value = today;
-    renderTasks(allTasks.filter(row => row['Harvest Date'] === today));
   });
 
+// --------------------
+// DOM READY BINDINGS
+// --------------------
 document.addEventListener('DOMContentLoaded', () => {
+  // Bind date selector
+  const dateInput = document.getElementById('date-selector');
+  if (dateInput) {
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+
+    const filtered = () => allTasks.filter(row => normalizeDate(row['Harvest Date']) === dateInput.value);
+    renderTasks(filtered());
+
+    dateInput.addEventListener('change', () => {
+      renderTasks(filtered());
+    });
+  }
+
+  // Bind Completed button
   const submit = document.getElementById('submit-btn');
   if (submit) {
     submit.addEventListener('click', () => {
+      if (!currentRow) return;
       const body = {
         id: currentRow._row,
         assignee: document.getElementById('assignee').value,
@@ -182,10 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Make Cancel button work
+  // Bind Cancel button
   const cancelBtn = document.getElementById('cancel-btn');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', closeForm);
   }
 });
-
