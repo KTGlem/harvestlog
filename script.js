@@ -144,13 +144,15 @@ fetch(SHEET_DATA_URL)
         if (key === 'Harvest Date') value = normalizeDate(value);
         // Normalize location into list if possible
         if (key === 'Location') {
-          obj[key] = value;
-          obj['_parsedLocations'] = value
-            .split(',')
-            .flatMap(part => part.split(/[\(\)]/))
-            .map(p => p.trim())
-            .filter(p => p.length > 0);
-        } else {
+  obj[key] = value;
+  // Improved regex: handles "1", "1 (2, 3)", etc.
+  const matches = [...value.matchAll(/(\d+)(?:\s*\(([^)]+)\))?/g)];
+  obj['_parsedLocations'] = matches.flatMap(m => {
+    const primary = m[1];
+    const extras = m[2]?.split(',').map(x => x.trim()) || [];
+    return [primary, ...extras];
+  });
+} else {
           obj[key] = value;
       }
 
