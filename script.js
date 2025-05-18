@@ -109,6 +109,7 @@ fetch(SHEET_DATA_URL)
       if (obj['Harvest Date'] === '2025-05-15') {
         console.log(`Row ${i + 2} | Crop: ${obj['Crop']} | Units: '${obj['Units to Harvest']}'`);
       }
+
       return obj;
     }).filter(row => row['Units to Harvest']);
     
