@@ -52,7 +52,6 @@ function openForm(rowId) {
   currentRow = task;
   document.getElementById('detail-title').innerText = task['Crop'];
   document.getElementById('detail-location').innerText = task['Location'] || '-';
-  document.getElementById('detail-channel').innerText = task['Harvest Date'];
   document.getElementById('detail-quantity').innerText = `${task['Units to Harvest']} ${task['Harvest Units']}`;
 
   const breakdown = document.getElementById('sales-breakdown');
