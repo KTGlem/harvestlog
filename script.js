@@ -174,11 +174,14 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
+      console.log('Submitting to', FORM_POST_URL);
+      
       fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       }).then(() => location.reload());
+      .catch(err => console.error('Submission failed:', err));
     });
   }
 
