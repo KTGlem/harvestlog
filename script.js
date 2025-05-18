@@ -106,8 +106,8 @@ fetch(SHEET_DATA_URL)
       obj._row = i + 2;
       
       // Log each row with visibility into Units to Harvest
-      if (data['Harvest Date'] === '2025-05-15') {
-        console.log(`Row ${i + 2} | Crop: ${data['Crop']} | Units: '${data['Units to Harvest']}'`);
+      if (obj['Harvest Date'] === '2025-05-15') {
+        console.log(`Row ${i + 2} | Crop: ${obj['Crop']} | Units: '${obj['Units to Harvest']}'`);
       }
       return obj;
     }).filter(row => row['Units to Harvest']);
