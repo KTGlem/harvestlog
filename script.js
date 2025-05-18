@@ -94,7 +94,11 @@ document.getElementById('date-selector').addEventListener('change', (e) => {
 fetch(SHEET_DATA_URL)
   .then(res => res.text())
   .then(csv => {
-    const rows = csv.split('\n').map(row => row.split(','));
+    const rows = csv.trim().split('\n').map(row => {
+      const regex = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+      return [...row.matchAll(regex)].map(m => m[0].replace(/^"|"$/g, ''));
+    });
+
     const headers = rows.shift();
     allTasks = rows.map((row, i) => {
       const obj = {};
