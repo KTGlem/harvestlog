@@ -98,7 +98,7 @@ fetch(SHEET_DATA_URL)
       const obj = {};
       headers.forEach((h, j) => {
         const key = h.trim();
-        let value = row[j] ? row[j].trim().replace(/\r/g, '') : '';
+        let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
         if (key === 'Harvest Date') value = normalizeDate(value);
         obj[key] = value;
     });
