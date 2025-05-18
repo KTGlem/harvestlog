@@ -88,7 +88,15 @@ document.getElementById('submit-btn').onclick = () => {
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
   console.log('User selected date:', selected);
-  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
+  const filtered = allTasks.filter(row => {
+  
+  // Debug: Show which tasks are being rendered
+  filtered.forEach(t => {
+    console.log(`Including task: ${t['Crop']} | Locations: ${t._parsedLocations?.join(', ')}`);
+  });
+  return normalizeDate(row['Harvest Date']) === selected;
+});
+
   console.log('Filtered tasks:', filtered);
   renderTasks(filtered);
 });
@@ -130,7 +138,18 @@ fetch(SHEET_DATA_URL)
         const key = h.trim();
         let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
         if (key === 'Harvest Date') value = normalizeDate(value);
-        obj[key] = value;
+        // Normalize location into list if possible
+        if (key === 'Location') {
+          obj[key] = value;
+          obj['_parsedLocations'] = value
+            .split(',')
+            .flatMap(part => part.split(/[\(\)]/))
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+        } else {
+          obj[key] = value;
+      }
+
     });
 
       obj._row = i + 2;
