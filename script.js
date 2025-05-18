@@ -102,6 +102,7 @@ fetch(SHEET_DATA_URL)
     const headers = rows.shift();
     allTasks = rows.map((row, i) => {
       const obj = {};
+      
       headers.forEach((h, j) => {
         const key = h.trim();
         let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
@@ -117,11 +118,16 @@ fetch(SHEET_DATA_URL)
       }
 
       return obj;
-    }).filter(row => row['Units to Harvest']);
+    }).filter(row => row['Crop'] && row['Harvest Date']);
     
     console.log('Parsed Harvest Dates:', allTasks.map(t => t['Harvest Date']));
     console.log('Parsed Locations:', allTasks.map(t => t['Location']));
-
+    // Optional: Log skipped rows with empty Units to Harvest
+    allTasks.forEach((row, i) => {
+      if (!row['Units to Harvest']) {
+        console.warn(`⚠️ Skipping Row ${i + 2}: Empty Units to Harvest | Crop: ${row['Crop']} | Date: ${row['Harvest Date']}`);
+      }
+    });
 
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('date-selector').value = today;
