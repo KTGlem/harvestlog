@@ -145,10 +145,17 @@ fetch(SHEET_DATA_URL)
     
     console.log('Parsed Harvest Dates:', allTasks.map(t => t['Harvest Date']));
     console.log('Parsed Locations:', allTasks.map(t => t['Location']));
+
+    // Add this now
+    taskMap = {};
+    allTasks.forEach(t => {
+      taskMap[t._row] = t;
+    });
+    
     // Optional: Log skipped rows with empty Units to Harvest
     allTasks.forEach((row, i) => {
       if (!row['Units to Harvest']) {
-        console.warn(`⚠️ Skipping Row ${i + 2}: Empty Units to Harvest | Crop: ${row['Crop']} | Date: ${row['Harvest Date']}`);
+        console.warn(`Skipping Row ${i + 2}: Empty Units to Harvest | Crop: ${row['Crop']} | Date: ${row['Harvest Date']}`);
       }
     });
 
