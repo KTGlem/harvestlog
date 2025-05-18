@@ -88,13 +88,18 @@ document.getElementById('submit-btn').onclick = () => {
 document.getElementById('date-selector').addEventListener('change', (e) => {
   const selected = e.target.value;
   console.log('User selected date:', selected);
-  const filtered = allTasks.filter(row => {
-  return normalizeDate(row['Harvest Date']) === selected;
-      // Debug: Show which tasks are being rendered
+
+  const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
+
+  // Debug: Show which tasks are being rendered
   filtered.forEach(t => {
     console.log(`Including task: ${t['Crop']} | Locations: ${t._parsedLocations?.join(', ')}`);
   });
+
+  console.log('Filtered tasks:', filtered);
+  renderTasks(filtered);
 });
+
 
   console.log('Filtered tasks:', filtered);
   renderTasks(filtered);
