@@ -96,8 +96,7 @@ document.getElementById('date-selector').addEventListener('change', (e) => {
     console.log(`Including task: ${t['Crop']} | Locations: ${t._parsedLocations?.join(', ')}`);
   });
 
-  console.log('Filtered tasks:', filtered);
-  renderTasks(filtered);
+
 });
 
 
