@@ -19,6 +19,8 @@ function renderTasks(tasks) {
   const container = document.getElementById('task-list');
   container.innerHTML = '';
 
+  console.log(`Rendering ${tasks.length} tasks`);
+
   tasks.forEach(task => {
     const div = document.createElement('div');
     div.className = 'task-card';
