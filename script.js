@@ -142,7 +142,7 @@ fetch(SHEET_DATA_URL)
       }
 
       return obj;
-    }).filter(row => row['Crop'] && row['Harvest Date']);
+    }).filter(row => row['Crop'] && row['Harvest Date'] && row['Units to Harvest']);
     
     console.log('Parsed Harvest Dates:', allTasks.map(t => t['Harvest Date']));
     console.log('Parsed Locations:', allTasks.map(t => t['Location']));
