@@ -177,13 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
-      const formData = new FormData();
-      formData.append('data', JSON.stringify(body));
-      
-fetch(FORM_POST_URL, {
-  method: 'POST',
-  body: formData
-});.then(() => location.reload());
+      fetch(FORM_POST_URL, {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => location.reload());
     });
   }
 
