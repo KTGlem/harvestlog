@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
-      console.log('Body being sent to Zapier:', JSON.stringify(body)); // Verify payload before sending
+      // ... (inside the submit.addEventListener('click', ...) )
 
       fetch(FORM_POST_URL, {
         method: 'POST',
@@ -185,20 +185,21 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' }
       })
       .then(response => {
-        // Always try to clone the response if you might need to read it more than once
-        // (though not strictly necessary with this refined pattern)
-        // const clonedResponse = response.clone(); // If you ever needed to debug with multiple reads
-
-        // First, check if the HTTP response itself was successful (e.g., 200 OK)
-        if (!response.ok) {
-          // If not OK, read the response as text (for error messages) and throw an error.
+        // Attempt to parse response as JSON first, as Zapier usually returns JSON
+        return response.json().then(data => {
+          // If response.ok is false, it means an HTTP error (e.g., 400, 500 from Zapier)
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status} - Zapier response: ${JSON.stringify(data)}`);
+          }
+          return data; // Return the parsed JSON data
+        }).catch(error => {
+          // This catch block handles errors *during* response.json() parsing itself,
+          // e.g., if Zapier sent non-JSON or an empty body on error.
+          // In this case, we fall back to reading the text.
           return response.text().then(text => {
-            throw new Error(`HTTP error! Status: ${response.status} - Response: ${text}`);
+            throw new Error(`HTTP error! Status: ${response.status} - Response not JSON: ${text}`);
           });
-        }
-        // If response is OK, try to parse it as JSON.
-        // This is the ONLY place response.json() should be called on the original response object.
-        return response.json();
+        });
       })
       .then(data => {
         // This code runs if the fetch request was successful and response was valid JSON
@@ -216,8 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
       })
       .catch(error => {
         // This code runs if there was any network error or if any 'throw new Error' occurred.
-        console.error('Error sending data to Zapier:', error); // Log the error to console
+        console.error('Error sending data to Zapier:', error);
         alert('Failed to send data to Zapier: ' + error.message + '\nCheck console for details.');
+        // IMPORTANT: DO NOT RELOAD HERE, so user can see the alert and developer can inspect console.
       });
   }
 
