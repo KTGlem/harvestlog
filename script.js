@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTilt71smVx4Rd1AV9CL0izzeOCB3Vd6jpMyaLKm2mBACfngJQwgQKcUEgyBhEsU20y95GareQUEYov/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbx0wzgjOFN9CGvW400kYSNHTMAOjtGGscWTRrOYX63bO0iOIjwM4lt8fTUE5spyrxYH/exec';
+const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/18062960/27c20wc/'; // From Zapier
 
 let currentRow = null;
 let allTasks = [];
@@ -149,19 +149,7 @@ fetch(SHEET_DATA_URL)
 // DOM READY BINDINGS
 // --------------------
 document.addEventListener('DOMContentLoaded', () => {
-  // Bind date selector
-  const dateInput = document.getElementById('date-selector');
-  if (dateInput) {
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.value = today;
-
-    const filtered = () => allTasks.filter(row => normalizeDate(row['Harvest Date']) === dateInput.value);
-    renderTasks(filtered());
-
-    dateInput.addEventListener('change', () => {
-      renderTasks(filtered());
-    });
-  }
+  // ... (existing DOMContentLoaded code) ...
 
   // Bind Completed button
   const submit = document.getElementById('submit-btn');
@@ -181,13 +169,26 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
-      }).then(() => location.reload());
+      })
+      .then(response => {
+        // Zapier will typically respond with JSON, even for success
+        // It's good practice to check if the response was successful
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json(); // Parse the JSON response from Zapier
+      })
+      .then(data => {
+        console.log('Successfully sent data to Zapier:', data);
+        // Zapier's success response will confirm it caught the hook, e.g., { "status": "success", "attempt": "..." }
+        // You can update your UI here to show success message if needed,
+        // or just proceed with the reload.
+        location.reload(); // This will refresh the page after successful send to Zapier
+      })
+      .catch(error => {
+        console.error('Error sending data to Zapier:', error);
+        // You would typically show an error message to the user here
+        alert('Failed to send data: ' + error.message); // Simple alert for user feedback
+      });
     });
   }
-
-  // Bind Cancel button
-  const cancelBtn = document.getElementById('cancel-btn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', closeForm);
-  }
-});
