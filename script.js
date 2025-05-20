@@ -143,6 +143,11 @@ fetch(SHEET_DATA_URL)
     allTasks.forEach(t => {
       taskMap[t._row] = t;
     });
+  })
+  .catch(error => { // <--- ADD THIS CATCH BLOCK
+    console.error('Error fetching or parsing SHEET_DATA_URL:', error);
+    alert('Could not load harvest data. Please check your internet connection and sheet URL.');
+    // You might want to display a message to the user here instead of an alert
   });
 
 // --------------------
