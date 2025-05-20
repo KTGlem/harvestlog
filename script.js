@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTilt71smVx4Rd1AV9CL0izzeOCB3Vd6jpMyaLKm2mBACfngJQwgQKcUEgyBhEsU20y95GareQUEYov/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbx0wzgjOFN9CGvW400kYSNHTMAOjtGGscWTRrOYX63bO0iOIjwM4lt8fTUE5spyrxYH/exec';
+const FORM_POST_URL = 'https://script.google.com/macros/s/1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g/exec';
 
 let currentRow = null;
 let allTasks = [];
