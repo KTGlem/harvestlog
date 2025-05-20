@@ -1,7 +1,7 @@
 // --------------------
 // CONFIGURATION
 // --------------------
-const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTilt71smVx4Rd1AV9CL0izzeOCB3Vd6jpMyaLKm2mBACfngJQwgQKcUEgyBhEsU20y95GareQUEYov/pub?gid=0&single=true&output=csv';
+const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
 const ZAPIER_WEBHOOK_URL = 'https://hooks.zapier.com/hooks/catch/18062960/27c20wc/'; // From Zapier
 
 let currentRow = null;
