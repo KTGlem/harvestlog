@@ -177,50 +177,45 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
-      console.log('Body being sent to Zapier:', JSON.stringify(body)); 
-      
-      fetch(FORM_POST_URL, {
+fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       })
       .then(response => {
-        // Attempt to parse response as JSON first, as Zapier usually returns JSON
-        return response.json().then(data => {
-          // If response.ok is false, it means an HTTP error (e.g., 400, 500 from Zapier)
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} - Zapier response: ${JSON.stringify(data)}`);
-          }
-          return data; // Return the parsed JSON data
-        }).catch(error => {
-          // This catch block handles errors *during* response.json() parsing itself,
-          // e.g., if Zapier sent non-JSON or an empty body on error.
-          // In this case, we fall back to reading the text.
+        // Step 1: Check if the HTTP response itself was successful (e.g., 200 OK)
+        if (!response.ok) {
+          // If it's not ok, throw an error. Try to read the response body for more info.
           return response.text().then(text => {
-            throw new Error(`HTTP error! Status: ${response.status} - Response not JSON: ${text}`);
+            throw new Error(`HTTP error! Status: ${response.status} - ${text}`);
           });
-        });
+        }
+        // Step 2: Parse the response from Zapier. Webhooks typically respond with JSON.
+        return response.json();
       })
       .then(data => {
-        // This code runs if the fetch request was successful and response was valid JSON
+        // Step 3: This code runs if the fetch request was successful and Zapier responded.
         console.log('Successfully sent data to Zapier:', data); // Log Zapier's response
-        // Zapier's success response will typically be like { "status": "success", "attempt": "..." }
-        if (data && data.status === 'success') {
-          alert('Data sent to Zapier successfully!');
-        } else if (data) {
-          alert('Data sent to Zapier, but Zapier indicated an issue: ' + JSON.stringify(data));
-        } else {
-          alert('Data sent to Zapier, but no clear success response.');
-        }
+        // Zapier's success response will confirm it caught the hook, e.g., { "status": "success", "attempt": "..." }
 
-        location.reload(); // Reload the page after confirmed success
+        // You can add UI feedback here, like a temporary "Data sent!" message
+        // const resultDiv = document.getElementById('result'); // Assuming you have a div for messages
+        // if(resultDiv) {
+        //   resultDiv.innerText = 'Data sent to Zapier successfully!';
+        //   resultDiv.style.color = 'green';
+        // }
+
+        // Now, reload the page only after confirmed success
+        location.reload();
       })
       .catch(error => {
-        // This code runs if there was any network error or if any 'throw new Error' occurred.
-        console.error('Error sending data to Zapier:', error);
+        // Step 4: This code runs if there was any network error or the response.ok check failed.
+        console.error('Error sending data to Zapier:', error); // Log the error to console
+        // Display an alert or update a UI element to inform the user about the failure
         alert('Failed to send data to Zapier: ' + error.message + '\nCheck console for details.');
         // IMPORTANT: DO NOT RELOAD HERE, so user can see the alert and developer can inspect console.
       });
+    });
   }
 
   // Bind Cancel button
