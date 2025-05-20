@@ -177,29 +177,26 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
-      console.log('Body being sent to Zapier:', JSON.stringify(body)); 
-      
+      // ... (inside the submit.addEventListener('click', ...) )
+
+      console.log('Body being sent to Zapier:', JSON.stringify(body)); // Verify payload before sending
+
       fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' }
       })
       .then(response => {
-        // Attempt to parse response as JSON first, as Zapier usually returns JSON
-        return response.json().then(data => {
-          // If response.ok is false, it means an HTTP error (e.g., 400, 500 from Zapier)
-          if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status} - Zapier response: ${JSON.stringify(data)}`);
-          }
-          return data; // Return the parsed JSON data
-        }).catch(error => {
-          // This catch block handles errors *during* response.json() parsing itself,
-          // e.g., if Zapier sent non-JSON or an empty body on error.
-          // In this case, we fall back to reading the text.
-          return response.text().then(text => {
-            throw new Error(`HTTP error! Status: ${response.status} - Response not JSON: ${text}`);
+        // --- THIS IS THE CRITICAL REVISION TO AVOID BODY STREAM LOCKING ---
+        // Read the response body ONLY ONCE.
+        // If the response is not OK (e.g., 4xx or 5xx status), read as text for error messages.
+        if (!response.ok) {
+          return response.text().then(text => { // Read as text for error details
+            throw new Error(`HTTP error! Status: ${response.status} - Response: ${text}`);
           });
-        });
+        }
+        // If the response is OK (e.g., 200), assume it's JSON and parse it.
+        return response.json(); // Read as JSON for success data
       })
       .then(data => {
         // This code runs if the fetch request was successful and response was valid JSON
@@ -216,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
         location.reload(); // Reload the page after confirmed success
       })
       .catch(error => {
-        // This code runs if there was any network error or if any 'throw new Error' occurred.
+        // This code runs if there was any network error or if any 'throw new Error' occurred in the .then chain.
         console.error('Error sending data to Zapier:', error);
         alert('Failed to send data to Zapier: ' + error.message + '\nCheck console for details.');
         // IMPORTANT: DO NOT RELOAD HERE, so user can see the alert and developer can inspect console.
