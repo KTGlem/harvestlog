@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTilt71smVx4Rd1AV9CL0izzeOCB3Vd6jpMyaLKm2mBACfngJQwgQKcUEgyBhEsU20y95GareQUEYov/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://script.google.com/macros/s/1YcqSW7jhwbVh4NSUMaYWsx5Y4Rto4vxMfxSDP54HK_g/exec';
+const FORM_POST_URL = 'https://hooks.zapier.com/hooks/catch/18062960/27c20wc/';
 
 let currentRow = null;
 let allTasks = [];
