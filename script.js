@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://webhook.site/6f7c87c2-3ad9-4ff7-9a52-e6acd4a8fef3';
+const FORM_POST_URL = 'https://hooks.zapier.com/hooks/catch/18062960/27c20wc/';
 
 let currentRow = null;
 let allTasks = []; // Correctly initialized
@@ -233,13 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
     submit.addEventListener('click', () => {
       if (!currentRow) return;
       const body = {
-        message: "Hello Zapier"
+        id: currentRow._row,
+        assignee: document.getElementById('assignee').value,
+        harvestTime: document.getElementById('harvestTime').value,
+        weight: document.getElementById('weight').value,
+        washPackTime: document.getElementById('washPackTime').value,
+        notes: document.getElementById('notes').value,
       };
 
-      console.log('Simplified body being sent:', JSON.stringify(body));
-      // ... rest of your fetch call
       console.log('Body being sent to Zapier:', JSON.stringify(body));
-
+      
       fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body),
