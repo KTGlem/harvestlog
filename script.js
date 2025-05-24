@@ -5,7 +5,7 @@ const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkA
 const FORM_POST_URL = 'https://hooks.zapier.com/hooks/catch/18062960/27c20wc/';
 
 let currentRow = null;
-let allTasks = [];
+let allTasks = []; // Correctly initialized
 let taskMap = {};
 
 // --------------------
@@ -13,28 +13,38 @@ let taskMap = {};
 // --------------------
 function normalizeDate(d) {
   if (!d) return '';
-  return d.trim()
-    .replace(/["']/g, '')
-    .replace(/\r/g, '')
-    .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (_, m, d, y) =>
-      `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    );
+  try {
+    return d.trim()
+      .replace(/["']/g, '')
+      .replace(/\r/g, '')
+      .replace(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, (_, m, d, y) =>
+        `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      );
+  } catch (error) {
+    console.error("Error normalizing date:", d, error);
+    return ''; // Return an empty string or a specific error indicator
+  }
 }
 
 // --------------------
 // RENDER: SUMMARY VIEW
 // --------------------
-function renderTasks(tasks) {
+function renderTasks(tasksToRender) { // Changed parameter name for clarity
   const container = document.getElementById('task-list');
-  container.innerHTML = '';
+  container.innerHTML = ''; // Clear previous tasks
 
-  tasks.forEach(task => {
+  if (!tasksToRender || tasksToRender.length === 0) {
+    container.innerHTML = '<p>No tasks to display for this date.</p>';
+    return;
+  }
+
+  tasksToRender.forEach(task => {
     const div = document.createElement('div');
     div.className = 'task-card';
     div.innerHTML = `
-      <strong>${task['Crop']}</strong><br>
+      <strong>${task['Crop'] || 'N/A'}</strong><br>
       <strong>Location:</strong> ${task['Location'] || '-'}<br>
-      <strong>Quantity:</strong> ${task['Units to Harvest']} ${task['Harvest Units']}<br>
+      <strong>Quantity:</strong> ${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}<br>
       <strong>Assigned To:</strong> ${task['Assignee(s)'] || 'Unassigned'}<br>
       <button onclick="openForm(${task._row || 0})">Open</button>
     `;
@@ -42,17 +52,18 @@ function renderTasks(tasks) {
   });
 }
 
-// --------------------
-// RENDER: DETAIL VIEW
-// --------------------
+// ... (openForm and closeForm remain the same) ...
 function openForm(rowId) {
   const task = taskMap[rowId];
-  if (!task) return;
+  if (!task) {
+      console.error("Task not found for rowId:", rowId);
+      return;
+  }
 
   currentRow = task;
-  document.getElementById('detail-title').innerText = task['Crop'];
+  document.getElementById('detail-title').innerText = task['Crop'] || 'N/A';
   document.getElementById('detail-location').innerText = task['Location'] || '-';
-  document.getElementById('detail-quantity').innerText = `${task['Units to Harvest']} ${task['Harvest Units']}`;
+  document.getElementById('detail-quantity').innerText = `${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}`;
 
   const breakdown = document.getElementById('sales-breakdown');
   breakdown.innerHTML = `
@@ -82,14 +93,18 @@ function closeForm() {
 // --------------------
 fetch(SHEET_DATA_URL)
   .then(res => {
-    if (!res.ok) { // Check if the fetch itself was successful
+    if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status} while fetching SHEET_DATA_URL`);
     }
     return res.text();
   })
   .then(csv => {
-    console.log("CSV data fetched successfully."); // For debugging
+    console.log("CSV data fetched successfully.");
+    if (!csv || csv.trim() === "") {
+        throw new Error("Fetched CSV data is empty.");
+    }
     const rows = csv.trim().split('\n').map(row => {
+      // ... (your existing robust CSV row parsing logic) ...
       const cells = [];
       let inQuotes = false, value = '';
       for (let i = 0; i < row.length; i++) {
@@ -114,17 +129,18 @@ fetch(SHEET_DATA_URL)
     if (!headers || headers.length === 0) {
       throw new Error("CSV headers are missing or empty.");
     }
-    console.log("CSV Headers:", headers); // For debugging
+    console.log("CSV Headers:", headers);
 
-    allTasks = rows.map((row, i) => {
+    // Temporarily disable the .filter in allTasks mapping to see all parsed data
+    const parsedTasks = rows.map((row, i) => {
       const obj = {};
       headers.forEach((h, j) => {
         const key = h.trim();
         let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
-        if (key === 'Harvest Date') { // Ensure this header name matches your CSV EXACTLY
-            value = normalizeDate(value);
+        if (key === 'Harvest Date') {
+            value = normalizeDate(value); // Ensure this is working
+            // console.log(`Original Date: ${row[j]}, Normalized: ${value}`); // For date debugging
         }
-        // Keep your existing location parsing logic if needed
         if (key === 'Location') {
           obj[key] = value;
           const matches = [...value.matchAll(/(\d+)(?:\s*\(([^)]+)\))?/g)];
@@ -137,79 +153,81 @@ fetch(SHEET_DATA_URL)
           obj[key] = value;
         }
       });
-      obj._row = i + 2; // Original row number in the sheet (headers + 0-indexed to 1-indexed)
+      obj._row = i + 2;
       return obj;
-    })
-    .filter(row =>
+    });
+
+    console.log('All Parsed Tasks (before filter):', JSON.parse(JSON.stringify(parsedTasks))); // Deep copy for logging
+
+    allTasks = parsedTasks.filter(row =>
       row['Crop'] &&
-      row['Harvest Date'] && // This needs to be the normalized YYYY-MM-DD format for the filter to work
+      row['Harvest Date'] && // This needs to be the normalized YYYY-MM-DD format
+      row['Harvest Date'] !== '' && // Ensure normalizeDate didn't return empty
       !isNaN(parseFloat(row['Units to Harvest'])) &&
       parseFloat(row['Units to Harvest']) > 0
     );
 
-    console.log('Parsed allTasks:', allTasks); // For debugging
+    console.log('Filtered allTasks:', JSON.parse(JSON.stringify(allTasks))); // Deep copy for logging
 
     taskMap = {};
     allTasks.forEach(t => {
       taskMap[t._row] = t;
     });
 
-    // --- Trigger initial rendering AFTER data is loaded and parsed ---
     const event = new Event('tasksLoaded');
     document.dispatchEvent(event);
-    // --- End trigger ---
-
   })
   .catch(error => {
     console.error('Error fetching or parsing initial sheet data:', error);
-    alert('Could not load harvest tasks. Please check the data source and your internet connection. Error: ' + error.message);
+    alert('Could not load harvest tasks. Error: ' + error.message);
     const container = document.getElementById('task-list');
     if (container) {
-        container.innerHTML = '<p style="color: red;">Error loading tasks: ' + error.message + '. Please try again later.</p>';
+        container.innerHTML = `<p style="color: red;">Error loading tasks: ${error.message}. Please try again later.</p>`;
     }
+    // Dispatch tasksLoaded event even on error, so UI can react if needed,
+    // or ensure allTasks is definitely an empty array
+    allTasks = []; // Ensure allTasks is an empty array on error
+    taskMap = {};
+    const event = new Event('tasksLoaded'); // Still dispatch so listener doesn't hang indefinitely
+    document.dispatchEvent(event);
   });
-
 
 // --------------------
 // DOM READY BINDINGS
 // --------------------
 document.addEventListener('DOMContentLoaded', () => {
-  // Bind date selector
   const dateInput = document.getElementById('date-selector');
   if (dateInput) {
-    // Set today's date initially
     const today = new Date().toISOString().split('T')[0];
     dateInput.value = today;
 
-    // Listen for the custom event that indicates tasks are loaded
     document.addEventListener('tasksLoaded', () => {
-      console.log("Tasks loaded event received, attempting initial render."); // For debugging
-      const filtered = () => allTasks.filter(row => {
-          // Add a log here to see what normalizeDate(row['Harvest Date']) and dateInput.value are
-          // console.log(`Filtering: Row Date: ${normalizeDate(row['Harvest Date'])}, Input Date: ${dateInput.value}`);
-          return normalizeDate(row['Harvest Date']) === dateInput.value;
+      console.log("Tasks loaded event received, attempting initial render for date:", dateInput.value);
+      // Ensure allTasks is an array before filtering
+      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
+      const filteredTasks = tasksToFilter.filter(row => {
+          const normalizedRowDate = normalizeDate(row['Harvest Date']);
+          // console.log(`Initial Render Filtering: RowDate='${normalizedRowDate}', InputDate='${dateInput.value}'`);
+          return normalizedRowDate === dateInput.value;
       });
-      renderTasks(filtered());
+      renderTasks(filteredTasks);
     });
 
     dateInput.addEventListener('change', () => {
-      console.log("Date changed, attempting to re-render."); // For debugging
-      if (allTasks && allTasks.length > 0) { // Ensure allTasks is defined and populated
-          const filtered = () => allTasks.filter(row => normalizeDate(row['Harvest Date']) === dateInput.value);
-          renderTasks(filtered());
-      } else {
-          console.warn('allTasks is not populated or empty when trying to render on date change.');
-          // Optionally clear the list or show a "No data" message if allTasks is empty
-          const container = document.getElementById('task-list');
-          if (container) {
-            container.innerHTML = '<p>No tasks to display for this date (data might still be loading or filtering issue).</p>';
-          }
-      }
+      const selectedDate = dateInput.value;
+      console.log("Date changed to:", selectedDate, "attempting to re-render.");
+      // Ensure allTasks is an array before filtering
+      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
+      const filteredTasks = tasksToFilter.filter(row => {
+          const normalizedRowDate = normalizeDate(row['Harvest Date']);
+          // console.log(`Date Change Filtering: RowDate='${normalizedRowDate}', InputDate='${selectedDate}'`);
+          return normalizedRowDate === selectedDate;
+      });
+      renderTasks(filteredTasks);
     });
   }
 
-  // --- Your existing Zapier submission logic can remain here ---
-  // Bind Completed button
+  // ... (Your Zapier submission logic) ...
   const submit = document.getElementById('submit-btn');
   if (submit) {
     submit.addEventListener('click', () => {
@@ -256,12 +274,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Bind Cancel button
   const cancelBtn = document.getElementById('cancel-btn');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', closeForm);
   }
-  // --- End Zapier submission logic ---
 });
-
-
