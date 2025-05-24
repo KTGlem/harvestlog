@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     submit.addEventListener('click', () => {
       if (!currentRow) return;
       const body = {
-        id: currentRow._row,
+        targetRow: currentRow._row, // Original row number from the sheet
         assignee: document.getElementById('assignee').value,
         harvestTime: document.getElementById('harvestTime').value,
         weight: document.getElementById('weight').value,
@@ -241,35 +241,33 @@ document.addEventListener('DOMContentLoaded', () => {
         notes: document.getElementById('notes').value,
       };
 
-      console.log('Body being sent to Zapier:', JSON.stringify(body));
+       console.log('Body being sent to Apps Script for update:', JSON.stringify(body));
       
       fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body)
         
       })
-      .then(response => {
+       .then(response => {
         if (!response.ok) {
           return response.text().then(text => {
             throw new Error(`HTTP error! Status: ${response.status} - Response: ${text}`);
           });
         }
-        return response.json();
+        return response.text(); // Apps Script doPost with ContentService returns text
       })
       .then(data => {
-        console.log('Successfully sent data to Zapier:', data);
-        if (data && data.status === 'success') {
-          alert('Data sent to Zapier successfully!');
-        } else if (data) {
-          alert('Data sent to Zapier, but Zapier indicated an issue: ' + JSON.stringify(data));
+        console.log('Response from Apps Script:', data);
+        if (data && data.toLowerCase().includes("success")) {
+          alert('Task updated in Google Sheet successfully!'); // More specific message
         } else {
-          alert('Data sent to Zapier, but no clear success response.');
+          alert('Task update sent, but Apps Script reported an issue or unexpected response: ' + data);
         }
-        location.reload();
+        location.reload(); // Reload to refresh the task list
       })
       .catch(error => {
-        console.error('Error sending data to Zapier:', error);
-        alert('Failed to send data to Zapier: ' + error.message + '\nCheck console for details.');
+        console.error('Error sending update to Apps Script:', error);
+        alert('Failed to update task in Google Sheet: ' + error.message + '\nCheck console for details.');
       });
     });
   }
