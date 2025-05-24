@@ -233,14 +233,11 @@ document.addEventListener('DOMContentLoaded', () => {
     submit.addEventListener('click', () => {
       if (!currentRow) return;
       const body = {
-        id: currentRow._row,
-        assignee: document.getElementById('assignee').value,
-        harvestTime: document.getElementById('harvestTime').value,
-        weight: document.getElementById('weight').value,
-        washPackTime: document.getElementById('washPackTime').value,
-        notes: document.getElementById('notes').value,
+        message: "Hello Zapier"
       };
 
+      console.log('Simplified body being sent:', JSON.stringify(body));
+      // ... rest of your fetch call
       console.log('Body being sent to Zapier:', JSON.stringify(body));
 
       fetch(FORM_POST_URL, {
