@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbwLhxDThyDnWGUYInHpSdy9ObXjq9Zh8sXOa4NRwf5kgqb-nVwb9gJsoqMFcKaS2Urv/exec';
+const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzO-tPQg-AYqfb9EsZVio4XUZv4X7pOibQkAy-wiX_ERgETZEggDJ73MWBMRr1FKEaM/exec';
 
 let currentRow = null;
 let allTasks = []; // Correctly initialized
@@ -161,15 +161,14 @@ fetch(SHEET_DATA_URL)
 
     allTasks = parsedTasks.filter(row =>
       row['Crop'] &&
-      row['Harvest Date'] && // This is the original scheduled date
-      row['Harvest Date'] !== '' &&
-      (row['Status'] !== 'Completed') && // <<< ADD THIS CONDITION
+      row['Harvest Date'] && // This needs to be the normalized YYYY-MM-DD format
+      row['Harvest Date'] !== '' && // Ensure normalizeDate didn't return empty
       !isNaN(parseFloat(row['Units to Harvest'])) &&
       parseFloat(row['Units to Harvest']) > 0
     );
 
-    console.log('Filtered allTasks (excluding completed):', JSON.parse(JSON.stringify(allTasks)));
-    
+    console.log('Filtered allTasks:', JSON.parse(JSON.stringify(allTasks))); // Deep copy for logging
+
     taskMap = {};
     allTasks.forEach(t => {
       taskMap[t._row] = t;
