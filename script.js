@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const FORM_POST_URL = 'https://script.google.com/macros/s/AKfycbzO-tPQg-AYqfb9EsZVio4XUZv4X7pOibQkAy-wiX_ERgETZEggDJ73MWBMRr1FKEaM/exec';
+const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a'; // <<<< IMPORTANT: Get this from your SheetBest connection settings
 
 let currentRow = null;
 let allTasks = []; // Correctly initialized
@@ -29,9 +29,9 @@ function normalizeDate(d) {
 // --------------------
 // RENDER: SUMMARY VIEW
 // --------------------
-function renderTasks(tasksToRender) { // Changed parameter name for clarity
+function renderTasks(tasksToRender) {
   const container = document.getElementById('task-list');
-  container.innerHTML = ''; // Clear previous tasks
+  container.innerHTML = '';
 
   if (!tasksToRender || tasksToRender.length === 0) {
     container.innerHTML = '<p>No tasks to display for this date.</p>';
@@ -52,7 +52,9 @@ function renderTasks(tasksToRender) { // Changed parameter name for clarity
   });
 }
 
-// ... (openForm and closeForm remain the same) ...
+// --------------------
+// RENDER: DETAIL VIEW
+// --------------------
 function openForm(rowId) {
   const task = taskMap[rowId];
   if (!task) {
@@ -60,7 +62,7 @@ function openForm(rowId) {
       return;
   }
 
-  currentRow = task;
+  currentRow = task; // currentRow._row is the 1-based sheet row number
   document.getElementById('detail-title').innerText = task['Crop'] || 'N/A';
   document.getElementById('detail-location').innerText = task['Location'] || '-';
   document.getElementById('detail-quantity').innerText = `${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}`;
@@ -104,7 +106,6 @@ fetch(SHEET_DATA_URL)
         throw new Error("Fetched CSV data is empty.");
     }
     const rows = csv.trim().split('\n').map(row => {
-      // ... (your existing robust CSV row parsing logic) ...
       const cells = [];
       let inQuotes = false, value = '';
       for (let i = 0; i < row.length; i++) {
@@ -131,15 +132,13 @@ fetch(SHEET_DATA_URL)
     }
     console.log("CSV Headers:", headers);
 
-    // Temporarily disable the .filter in allTasks mapping to see all parsed data
     const parsedTasks = rows.map((row, i) => {
       const obj = {};
       headers.forEach((h, j) => {
         const key = h.trim();
         let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
         if (key === 'Harvest Date') {
-            value = normalizeDate(value); // Ensure this is working
-            // console.log(`Original Date: ${row[j]}, Normalized: ${value}`); // For date debugging
+            value = normalizeDate(value);
         }
         if (key === 'Location') {
           obj[key] = value;
@@ -153,22 +152,23 @@ fetch(SHEET_DATA_URL)
           obj[key] = value;
         }
       });
-      obj._row = i + 2;
+      obj._row = i + 2; // This is the 1-based row number in the sheet (1 for header, then data starts at row 2)
       return obj;
     });
 
-    console.log('All Parsed Tasks (before filter):', JSON.parse(JSON.stringify(parsedTasks))); // Deep copy for logging
+    console.log('All Parsed Tasks (before filter):', JSON.parse(JSON.stringify(parsedTasks)));
 
     allTasks = parsedTasks.filter(row =>
       row['Crop'] &&
-      row['Harvest Date'] && // This needs to be the normalized YYYY-MM-DD format
-      row['Harvest Date'] !== '' && // Ensure normalizeDate didn't return empty
+      row['Harvest Date'] &&
+      row['Harvest Date'] !== '' &&
+      (row['Status'] !== 'Completed') && // Ensure Status column is in your CSV
       !isNaN(parseFloat(row['Units to Harvest'])) &&
       parseFloat(row['Units to Harvest']) > 0
     );
 
-    console.log('Filtered allTasks:', JSON.parse(JSON.stringify(allTasks))); // Deep copy for logging
-
+    console.log('Filtered allTasks (excluding completed):', JSON.parse(JSON.stringify(allTasks)));
+    
     taskMap = {};
     allTasks.forEach(t => {
       taskMap[t._row] = t;
@@ -184,11 +184,9 @@ fetch(SHEET_DATA_URL)
     if (container) {
         container.innerHTML = `<p style="color: red;">Error loading tasks: ${error.message}. Please try again later.</p>`;
     }
-    // Dispatch tasksLoaded event even on error, so UI can react if needed,
-    // or ensure allTasks is definitely an empty array
-    allTasks = []; // Ensure allTasks is an empty array on error
+    allTasks = []; 
     taskMap = {};
-    const event = new Event('tasksLoaded'); // Still dispatch so listener doesn't hang indefinitely
+    const event = new Event('tasksLoaded'); 
     document.dispatchEvent(event);
   });
 
@@ -203,11 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('tasksLoaded', () => {
       console.log("Tasks loaded event received, attempting initial render for date:", dateInput.value);
-      // Ensure allTasks is an array before filtering
       const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
       const filteredTasks = tasksToFilter.filter(row => {
           const normalizedRowDate = normalizeDate(row['Harvest Date']);
-          // console.log(`Initial Render Filtering: RowDate='${normalizedRowDate}', InputDate='${dateInput.value}'`);
           return normalizedRowDate === dateInput.value;
       });
       renderTasks(filteredTasks);
@@ -216,55 +212,108 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.addEventListener('change', () => {
       const selectedDate = dateInput.value;
       console.log("Date changed to:", selectedDate, "attempting to re-render.");
-      // Ensure allTasks is an array before filtering
       const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
       const filteredTasks = tasksToFilter.filter(row => {
           const normalizedRowDate = normalizeDate(row['Harvest Date']);
-          // console.log(`Date Change Filtering: RowDate='${normalizedRowDate}', InputDate='${selectedDate}'`);
           return normalizedRowDate === selectedDate;
       });
       renderTasks(filteredTasks);
     });
   }
 
-  // ... (Your Google Apps Script submission logic) ...
   const submit = document.getElementById('submit-btn');
   if (submit) {
     submit.addEventListener('click', () => {
-      if (!currentRow) return;
-      const body = {
-        targetRow: currentRow._row, // Original row number from the sheet
-        assignee: document.getElementById('assignee').value,
-        harvestTime: document.getElementById('harvestTime').value,
-        weight: document.getElementById('weight').value,
-        washPackTime: document.getElementById('washPackTime').value,
-        notes: document.getElementById('notes').value,
+      if (!currentRow || !currentRow._row) { // Check if currentRow and _row are defined
+          console.error("Current row data is not available or _row is missing.");
+          alert("Error: No task selected or task data is incomplete.");
+          return;
+      }
+
+      // SheetBest row indices are 0-based (for data rows, header is not counted by SheetBest)
+      // Your currentRow._row is 1-based and includes the header row.
+      // So, if header is row 1, data row 2 in sheet is index 0 for SheetBest.
+      // If your _row = 2 (first data row), sheetBestIndex = 2 - 2 = 0.
+      // If your _row = 37 (36th data row), sheetBestIndex = 37 - 2 = 35.
+      const sheetBestRowIndex = currentRow._row - 2; 
+      if (sheetBestRowIndex < 0) {
+          console.error("Calculated invalid SheetBest row index:", sheetBestRowIndex);
+          alert("Error: Invalid row index for update.");
+          return;
+      }
+
+      const updateUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
+      console.log("Update URL for SheetBest:", updateUrl);
+
+      const harvestTimeValue = document.getElementById('harvestTime').value;
+      const weightValue = document.getElementById('weight').value;
+      const washPackTimeValue = document.getElementById('washPackTime').value;
+
+      const dataToUpdate = {
+        // Keys here MUST EXACTLY MATCH your Google Sheet column headers that you want to update
+        'Assignee(s)': document.getElementById('assignee').value,
+        'Field Crew Notes': document.getElementById('notes').value
+        // Add other fields conditionally
       };
 
-       console.log('Body being sent to Apps Script for update:', JSON.stringify(body));
-      
-      fetch(FORM_POST_URL, {
-        method: 'POST',
-        body: JSON.stringify(body)
-        // NO 'headers: { 'Content-Type': 'application/json' }' explicitly set
-        // Let the browser send it as text/plain, which Apps Script can still parse
+      const isBeingCompleted = (harvestTimeValue && harvestTimeValue.trim() !== "") ||
+                              (weightValue && weightValue.trim() !== "") ||
+                              (washPackTimeValue && washPackTimeValue.trim() !== "");
+
+      if (isBeingCompleted) {
+        dataToUpdate['Time to Harvest (min)'] = harvestTimeValue;
+        dataToUpdate['Harvest Weight (kg)'] = weightValue;
+        dataToUpdate['Time to Wash & Pack (mins)'] = washPackTimeValue;
+        dataToUpdate['Status'] = 'Completed';
+        // Update the "Harvest Date" (Column P) to the completion timestamp
+        dataToUpdate['Harvest Date'] = new Date().toISOString(); // Or .toLocaleDateString() etc. depending on desired format for this updated date
+      } else if (document.getElementById('assignee').value.trim() !== "") {
+        // If not completing but assignee is set, update status to "Assigned"
+        // (only if current status isn't already "Completed" - this check needs to happen based on fetched data,
+        // or you just overwrite, or SheetBest supports partial updates where empty fields are ignored)
+        // For simplicity, let's assume we just set it to "Assigned" if an assignee is present and not completing.
+        // You might want to fetch current status first for more complex logic.
+        dataToUpdate['Status'] = 'Assigned';
+      }
+      // If assignee is also cleared and not completing, you might want to clear the Status or set to blank.
+
+      console.log('Body being sent to SheetBest for PUT:', JSON.stringify(dataToUpdate));
+
+      fetch(updateUrl, {
+        method: 'PUT', // Use PUT to update a specific row by index
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add API Key header if your SheetBest connection requires it
+          // 'X-Api-Key': 'YOUR_SHEETBEST_API_KEY'
+        },
+        body: JSON.stringify(dataToUpdate)
       })
       .then(response => {
-        // We might not be able to read response.ok or response.text() due to CORS
-        // if the response headers aren't perfectly set by Apps Script for unauth users.
-        // However, if we reach here without a network error, the request was likely sent.
-        console.log('Fetch request sent. Status (may be opaque):', response.status, 'OK:', response.ok);
-
-        // Since the sheet IS updating, we can be optimistic here.
-        // We won't try to read response.text() or response.json() if it causes CORS error.
-        alert('Task update submitted! Please verify the sheet.'); // More neutral message
+        if (!response.ok) {
+          return response.json().catch(() => response.text()).then(errorData => {
+            let errorMessage = `HTTP error! Status: ${response.status}. `;
+            if (typeof errorData === 'string') {
+                errorMessage += `Response: ${errorData}`;
+            } else if (errorData && (errorData.message || errorData.detail)) {
+                errorMessage += `Error: ${errorData.message || errorData.detail}`;
+                if(errorData.errors) errorMessage += ` Details: ${JSON.stringify(errorData.errors)}`;
+            } else {
+                errorMessage += `Could not parse error response from SheetBest. Raw: ${JSON.stringify(errorData)}`;
+            }
+            throw new Error(errorMessage);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Successfully updated row via SheetBest:', data);
+        alert('Task updated successfully via SheetBest!');
         location.reload();
       })
       .catch(error => {
-        // This will catch network errors (e.g., server down, DNS issue)
-        // OR the CORS error if the browser still blocks it even before .then()
-        console.error('Error sending update to Apps Script:', error);
-        alert('Failed to send update. Please check console and try again. Error: ' + error.message);
+        console.error('Error updating row via SheetBest:', error);
+        alert('Failed to update task via SheetBest: ' + error.message + '\nCheck console for details.');
       });
     });
   }
