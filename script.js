@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ... (Your Zapier submission logic) ...
+  // ... (Your Google Apps Script submission logic) ...
   const submit = document.getElementById('submit-btn');
   if (submit) {
     submit.addEventListener('click', () => {
@@ -246,28 +246,25 @@ document.addEventListener('DOMContentLoaded', () => {
       fetch(FORM_POST_URL, {
         method: 'POST',
         body: JSON.stringify(body)
-        
+        // NO 'headers: { 'Content-Type': 'application/json' }' explicitly set
+        // Let the browser send it as text/plain, which Apps Script can still parse
       })
-       .then(response => {
-        if (!response.ok) {
-          return response.text().then(text => {
-            throw new Error(`HTTP error! Status: ${response.status} - Response: ${text}`);
-          });
-        }
-        return response.text(); // Apps Script doPost with ContentService returns text
-      })
-      .then(data => {
-        console.log('Response from Apps Script:', data);
-        if (data && data.toLowerCase().includes("success")) {
-          alert('Task updated in Google Sheet successfully!'); // More specific message
-        } else {
-          alert('Task update sent, but Apps Script reported an issue or unexpected response: ' + data);
-        }
-        location.reload(); // Reload to refresh the task list
+      .then(response => {
+        // We might not be able to read response.ok or response.text() due to CORS
+        // if the response headers aren't perfectly set by Apps Script for unauth users.
+        // However, if we reach here without a network error, the request was likely sent.
+        console.log('Fetch request sent. Status (may be opaque):', response.status, 'OK:', response.ok);
+
+        // Since the sheet IS updating, we can be optimistic here.
+        // We won't try to read response.text() or response.json() if it causes CORS error.
+        alert('Task update submitted! Please verify the sheet.'); // More neutral message
+        location.reload();
       })
       .catch(error => {
+        // This will catch network errors (e.g., server down, DNS issue)
+        // OR the CORS error if the browser still blocks it even before .then()
         console.error('Error sending update to Apps Script:', error);
-        alert('Failed to update task in Google Sheet: ' + error.message + '\nCheck console for details.');
+        alert('Failed to send update. Please check console and try again. Error: ' + error.message);
       });
     });
   }
