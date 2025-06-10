@@ -79,10 +79,11 @@ function openForm(rowId) {
   `;
 
   document.getElementById('assignee').value = task['Assignee(s)'] || '';
-  document.getElementById('harvestTime').value = '';
-  document.getElementById('weight').value = '';
-  document.getElementById('washPackTime').value = '';
-  document.getElementById('notes').value = '';
+  document.getElementById('harvestTime').value = task['Time to Harvest (min)'] || '';
+  document.getElementById('weight').value = task['Harvest Weight (kg)'] || '';
+  document.getElementById('washPackTime').value = task['Time to Wash & Pack (mins)'] || '';
+  document.getElementById('notes').value = task['Field Crew Notes'] || '';
+
 
   document.getElementById('detail-form').style.display = 'block';
 }
