@@ -2,15 +2,14 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a';
+const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a'; // Keep your actual SheetBest URL
 
 let currentRow = null;
-let allTasks = [];
+let allTasks = []; // Correctly initialized
 let taskMap = {};
 
 // --------------------
-// UTILITY FUNCTION
-// Normalize inconsistent date formats to YYYY-MM-DD
+// UTILITY FUNCTIONS
 // --------------------
 function normalizeDate(d) {
   if (!d) return '';
@@ -22,19 +21,19 @@ function normalizeDate(d) {
         `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
       );
   } catch (error) {
-    console.error("Error normalizing date:", d, error);
-    return '';
+    console.error("Error normalizing date: / Error al normalizar fecha:", d, error);
+    return ''; // Return an empty string or a specific error indicator
   }
 }
 
 // --------------------
-// RENDER SUMMARY LIST OF TASKS
+// RENDER: SUMMARY VIEW
 // --------------------
 function renderTasks(tasksToRender) {
   const container = document.getElementById('task-list');
   container.innerHTML = '';
 
-  if (!tasksToRender.length) {
+  if (!tasksToRender || tasksToRender.length === 0) {
     container.innerHTML = '<p>No tasks to display for this date. / No hay tareas para esta fecha.</p>';
     return;
   }
@@ -54,30 +53,31 @@ function renderTasks(tasksToRender) {
 }
 
 // --------------------
-// DETAIL FORM VIEW
+// RENDER: DETAIL VIEW
 // --------------------
 function openForm(rowId) {
   const task = taskMap[rowId];
   if (!task) {
-    console.error("Task not found for rowId:", rowId);
-    return;
+      console.error("Task not found for rowId: / Tarea no encontrada para rowId:", rowId);
+      return;
   }
 
   currentRow = task;
-  document.getElementById('detail-title').innerText = task['Crop'] || 'N/A';
+  document.getElementById('detail-title').innerText = task['Crop'] || 'N/A'; // Crop name handled by sheet data
   document.getElementById('detail-location').innerText = task['Location'] || '-';
   document.getElementById('detail-quantity').innerText = `${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}`;
 
-  document.getElementById('sales-breakdown').innerHTML = `
+  const breakdown = document.getElementById('sales-breakdown');
+  // Assuming CSV keys remain in English. If CSV keys change, this needs adjustment.
+  breakdown.innerHTML = `
     <strong>Sales Breakdown / Desglose de Ventas:</strong>
-    <span>CSA: ${task['CSA'] || 0}</span>
-    <span>Parkdale Bins: ${task['Parkdale Bins'] || 0}</span>
-    <span>Cobourg Market: ${task['Cobourg Farmers Market'] || 0}</span>
-    <span>Kitchen: ${task['Kitchen'] || 0}</span>
-    <span>Online: ${task['Online'] || 0}</span>
+    <span>CSA / CSA: ${task['CSA'] || 0}</span>
+    <span>Parkdale Bins / Contenedores Parkdale: ${task['Parkdale Bins'] || 0}</span>
+    <span>Cobourg Farmers Market / Mercado de Agricultores de Cobourg: ${task['Cobourg Farmers Market'] || 0}</span>
+    <span>Kitchen / Cocina: ${task['Kitchen'] || 0}</span>
+    <span>Online / En línea: ${task['Online'] || 0}</span>
   `;
 
-  // Reset form inputs
   document.getElementById('assignee').value = task['Assignee(s)'] || '';
   document.getElementById('harvestTime').value = '';
   document.getElementById('weight').value = '';
@@ -92,74 +92,107 @@ function closeForm() {
 }
 
 // --------------------
-// BUILD PAYLOAD FOR PATCH
-// - requireAllFields = true → used for final "Mark Completed"
+// DATA FETCH & PARSE
 // --------------------
-function buildPayload(requireAllFields = false) {
-  const assignee = document.getElementById('assignee').value.trim();
-  const harvestTime = document.getElementById('harvestTime').value.trim();
-  const weight = document.getElementById('weight').value.trim();
-  const washPackTime = document.getElementById('washPackTime').value.trim();
-  const notes = document.getElementById('notes').value.trim();
-
-  if (requireAllFields && (!assignee || !harvestTime || !weight || !washPackTime)) {
-    alert("Please complete all required fields before marking as completed.");
-    return null;
-  }
-
-  const payload = {};
-  if (assignee) payload['Assignee(s)'] = assignee;
-  if (harvestTime) payload['Time to Harvest (min)'] = harvestTime;
-  if (weight) payload['Harvest Weight (kg)'] = weight;
-  if (washPackTime) payload['Time to Wash & Pack (mins)'] = washPackTime;
-  if (notes) payload['Field Crew Notes'] = notes;
-
-  if (requireAllFields) {
-    payload['Status'] = 'Completed';
-    payload['Harvest Date'] = new Date().toISOString().split('T')[0]; // today
-  } else if (assignee) {
-    payload['Status'] = 'Assigned';
-  }
-
-  return payload;
-}
-
-// --------------------
-// SEND PATCH TO SHEETBEST
-// --------------------
-function sendUpdate(payload) {
-  if (!currentRow || typeof currentRow._row === 'undefined') {
-    alert("Task data is incomplete.");
-    return;
-  }
-
-  const rowIndex = currentRow._row - 2;
-  const url = `${SHEETBEST_CONNECTION_URL}/${rowIndex}`;
-
-  fetch(url, {
-    method: 'PATCH',
-    mode: 'cors', // ✅ Required for browser-based SheetBest access
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
+fetch(SHEET_DATA_URL)
+  .then(res => {
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status} while fetching SHEET_DATA_URL`);
+    }
+    return res.text();
   })
-    .then(response => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
-    })
-    .then(() => {
-      alert('Update successful!');
-      location.reload(); // Refresh to re-render summary list
-    })
-    .catch(error => {
-      console.error('Failed to update task:', error);
-      alert('Error updating task. Check console for details.');
+  .then(csv => {
+    console.log("CSV data fetched successfully. / Datos CSV obtenidos con éxito.");
+    if (!csv || csv.trim() === "") {
+        throw new Error("Fetched CSV data is empty. / Los datos CSV obtenidos están vacíos.");
+    }
+    const rows = csv.trim().split('\n').map(row => {
+      const cells = [];
+      let inQuotes = false, value = '';
+      for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        const nextChar = row[i + 1];
+        if (char === '"' && inQuotes && nextChar === '"') {
+          value += '"'; i++;
+        } else if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          cells.push(value);
+          value = '';
+        } else {
+          value += char;
+        }
+      }
+      cells.push(value);
+      return cells.map(c => c.trim());
     });
-}
+
+    const headers = rows.shift();
+    if (!headers || headers.length === 0) {
+      throw new Error("CSV headers are missing or empty. / Faltan encabezados CSV o están vacíos.");
+    }
+    console.log("CSV Headers: / Encabezados CSV:", headers);
+
+    const parsedTasks = rows.map((row, i) => {
+      const obj = {};
+      headers.forEach((h, j) => {
+        const key = h.trim();
+        let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
+        if (key === 'Harvest Date') { // Assuming 'Harvest Date' header remains in English in CSV
+            value = normalizeDate(value);
+        }
+        if (key === 'Location') { // Assuming 'Location' header remains in English in CSV
+          obj[key] = value;
+          const matches = [...value.matchAll(/(\d+)(?:\s*\(([^)]+)\))?/g)];
+          obj['_parsedLocations'] = matches.flatMap(m => {
+            const primary = m[1];
+            const extras = m[2]?.split(',').map(x => x.trim()) || [];
+            return [primary, ...extras];
+          });
+        } else {
+          obj[key] = value;
+        }
+      });
+      obj._row = i + 2;
+      return obj;
+    });
+
+    console.log('All Parsed Tasks (before filter): / Todas las tareas analizadas (antes del filtro):', JSON.parse(JSON.stringify(parsedTasks)));
+
+    allTasks = parsedTasks.filter(row =>
+      row['Crop'] && // Assuming 'Crop' header remains in English
+      row['Harvest Date'] && // Assuming 'Harvest Date' header remains in English (and value is normalized date)
+      row['Harvest Date'] !== '' &&
+      (row['Status'] !== 'Completed') && // Assuming 'Status' header remains in English
+      !isNaN(parseFloat(row['Units to Harvest'])) && // Assuming 'Units to Harvest' header remains in English
+      parseFloat(row['Units to Harvest']) > 0
+    );
+
+    console.log('Filtered allTasks (excluding completed): / Tareas filtradas (excluyendo completadas):', JSON.parse(JSON.stringify(allTasks)));
+    
+    taskMap = {};
+    allTasks.forEach(t => {
+      taskMap[t._row] = t;
+    });
+
+    const event = new Event('tasksLoaded');
+    document.dispatchEvent(event);
+  })
+  .catch(error => {
+    console.error('Error fetching or parsing initial sheet data: / Error al obtener o analizar datos iniciales de la hoja:', error);
+    alert('Could not load harvest tasks. Error: ' + error.message + ' / No se pudieron cargar las tareas de cosecha. Error: ' + error.message);
+    const container = document.getElementById('task-list');
+    if (container) {
+        container.innerHTML = `<p style="color: red;">Error loading tasks: ${error.message}. Please try again later. / Error al cargar tareas: ${error.message}. Por favor, inténtalo de nuevo más tarde.</p>`;
+    }
+    allTasks = []; 
+    taskMap = {};
+    const event = new Event('tasksLoaded'); 
+    document.dispatchEvent(event);
+  });
 
 // --------------------
-// PAGE LOAD & BUTTON EVENTS
+// DOM READY BINDINGS
 // --------------------
 document.addEventListener('DOMContentLoaded', () => {
   const dateInput = document.getElementById('date-selector');
@@ -168,24 +201,101 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = today;
 
     document.addEventListener('tasksLoaded', () => {
-      const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === dateInput.value);
-      renderTasks(filtered);
+      console.log("Tasks loaded event received, attempting initial render for date: / Evento de tareas cargadas recibido, intentando renderizado inicial para la fecha:", dateInput.value);
+      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
+      const filteredTasks = tasksToFilter.filter(row => {
+          const normalizedRowDate = normalizeDate(row['Harvest Date']); // Assumes 'Harvest Date' header
+          return normalizedRowDate === dateInput.value;
+      });
+      renderTasks(filteredTasks);
     });
 
     dateInput.addEventListener('change', () => {
-      const selected = dateInput.value;
-      const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
-      renderTasks(filtered);
+      const selectedDate = dateInput.value;
+      console.log("Date changed to: / Fecha cambiada a:", selectedDate, "attempting to re-render. / intentando re-renderizar.");
+      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
+      const filteredTasks = tasksToFilter.filter(row => {
+          const normalizedRowDate = normalizeDate(row['Harvest Date']); // Assumes 'Harvest Date' header
+          return normalizedRowDate === selectedDate;
+      });
+      renderTasks(filteredTasks);
     });
   }
 
-  document.getElementById('update-btn')?.addEventListener('click', () => {
-    const payload = buildPayload(false);
-    if (payload) sendUpdate(payload);
+  // Handle 'Update' (partial or in-progress task update)
+const updateBtn = document.getElementById('update-btn');
+if (updateBtn) {
+  updateBtn.addEventListener('click', () => {
+    handleSubmit(false); // allow partial
   });
+}
 
-  document.getElementById('complete-btn')?.addEventListener('click', () => {
-    const payload = buildPayload(true);
-    if (payload) sendUpdate(payload);
+// Handle 'Mark Completed' (requires all fields)
+const completeBtn = document.getElementById('complete-btn');
+if (completeBtn) {
+  completeBtn.addEventListener('click', () => {
+    handleSubmit(true); // require all
   });
+}
+
+// Shared handler function
+function handleSubmit(requireAllFields) {
+  if (!currentRow || typeof currentRow._row === 'undefined') {
+    alert("Error: Task data missing.");
+    return;
+  }
+
+  const harvestTime = document.getElementById('harvestTime').value.trim();
+  const weight = document.getElementById('weight').value.trim();
+  const washPackTime = document.getElementById('washPackTime').value.trim();
+  const assignee = document.getElementById('assignee').value.trim();
+  const notes = document.getElementById('notes').value.trim();
+
+  if (requireAllFields && (!assignee || !harvestTime || !weight || !washPackTime)) {
+    alert("Please complete all fields before marking as completed.");
+    return;
+  }
+
+  const dataToUpdate = {};
+  if (assignee) dataToUpdate['Assignee(s)'] = assignee;
+  if (harvestTime) dataToUpdate['Time to Harvest (min)'] = harvestTime;
+  if (weight) dataToUpdate['Harvest Weight (kg)'] = weight;
+  if (washPackTime) dataToUpdate['Time to Wash & Pack (mins)'] = washPackTime;
+  if (notes) dataToUpdate['Field Crew Notes'] = notes;
+
+  if (requireAllFields) {
+    dataToUpdate['Status'] = 'Completed';
+    dataToUpdate['Harvest Date'] = new Date().toISOString().split('T')[0];
+  } else if (assignee) {
+    dataToUpdate['Status'] = 'Assigned';
+  }
+
+  const sheetBestRowIndex = currentRow._row - 2;
+  const updateUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
+
+  fetch(updateUrl, {
+    method: 'PATCH',
+    mode: 'cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(dataToUpdate)
+  })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(() => {
+      alert('Task updated!');
+      location.reload();
+    })
+    .catch(error => {
+      console.error('Update failed:', error);
+      alert('Error updating task. See console.');
+    });
+}
+
+
+  const cancelBtn = document.getElementById('cancel-btn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', closeForm);
+  }
 });
