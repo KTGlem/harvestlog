@@ -2,14 +2,15 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a'; // Keep your actual SheetBest URL
+const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a';
 
 let currentRow = null;
-let allTasks = []; // Correctly initialized
+let allTasks = [];
 let taskMap = {};
 
 // --------------------
-// UTILITY FUNCTIONS
+// UTILITY FUNCTION
+// Normalize inconsistent date formats to YYYY-MM-DD
 // --------------------
 function normalizeDate(d) {
   if (!d) return '';
@@ -21,19 +22,19 @@ function normalizeDate(d) {
         `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
       );
   } catch (error) {
-    console.error("Error normalizing date: / Error al normalizar fecha:", d, error);
-    return ''; // Return an empty string or a specific error indicator
+    console.error("Error normalizing date:", d, error);
+    return '';
   }
 }
 
 // --------------------
-// RENDER: SUMMARY VIEW
+// RENDER SUMMARY LIST OF TASKS
 // --------------------
 function renderTasks(tasksToRender) {
   const container = document.getElementById('task-list');
   container.innerHTML = '';
 
-  if (!tasksToRender || tasksToRender.length === 0) {
+  if (!tasksToRender.length) {
     container.innerHTML = '<p>No tasks to display for this date. / No hay tareas para esta fecha.</p>';
     return;
   }
@@ -53,31 +54,30 @@ function renderTasks(tasksToRender) {
 }
 
 // --------------------
-// RENDER: DETAIL VIEW
+// DETAIL FORM VIEW
 // --------------------
 function openForm(rowId) {
   const task = taskMap[rowId];
   if (!task) {
-      console.error("Task not found for rowId: / Tarea no encontrada para rowId:", rowId);
-      return;
+    console.error("Task not found for rowId:", rowId);
+    return;
   }
 
   currentRow = task;
-  document.getElementById('detail-title').innerText = task['Crop'] || 'N/A'; // Crop name handled by sheet data
+  document.getElementById('detail-title').innerText = task['Crop'] || 'N/A';
   document.getElementById('detail-location').innerText = task['Location'] || '-';
   document.getElementById('detail-quantity').innerText = `${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}`;
 
-  const breakdown = document.getElementById('sales-breakdown');
-  // Assuming CSV keys remain in English. If CSV keys change, this needs adjustment.
-  breakdown.innerHTML = `
+  document.getElementById('sales-breakdown').innerHTML = `
     <strong>Sales Breakdown / Desglose de Ventas:</strong>
-    <span>CSA / CSA: ${task['CSA'] || 0}</span>
-    <span>Parkdale Bins / Contenedores Parkdale: ${task['Parkdale Bins'] || 0}</span>
-    <span>Cobourg Farmers Market / Mercado de Agricultores de Cobourg: ${task['Cobourg Farmers Market'] || 0}</span>
-    <span>Kitchen / Cocina: ${task['Kitchen'] || 0}</span>
-    <span>Online / En línea: ${task['Online'] || 0}</span>
+    <span>CSA: ${task['CSA'] || 0}</span>
+    <span>Parkdale Bins: ${task['Parkdale Bins'] || 0}</span>
+    <span>Cobourg Market: ${task['Cobourg Farmers Market'] || 0}</span>
+    <span>Kitchen: ${task['Kitchen'] || 0}</span>
+    <span>Online: ${task['Online'] || 0}</span>
   `;
 
+  // Reset form inputs
   document.getElementById('assignee').value = task['Assignee(s)'] || '';
   document.getElementById('harvestTime').value = '';
   document.getElementById('weight').value = '';
@@ -92,107 +92,74 @@ function closeForm() {
 }
 
 // --------------------
-// DATA FETCH & PARSE
+// BUILD PAYLOAD FOR PATCH
+// - requireAllFields = true → used for final "Mark Completed"
 // --------------------
-fetch(SHEET_DATA_URL)
-  .then(res => {
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status} while fetching SHEET_DATA_URL`);
-    }
-    return res.text();
-  })
-  .then(csv => {
-    console.log("CSV data fetched successfully. / Datos CSV obtenidos con éxito.");
-    if (!csv || csv.trim() === "") {
-        throw new Error("Fetched CSV data is empty. / Los datos CSV obtenidos están vacíos.");
-    }
-    const rows = csv.trim().split('\n').map(row => {
-      const cells = [];
-      let inQuotes = false, value = '';
-      for (let i = 0; i < row.length; i++) {
-        const char = row[i];
-        const nextChar = row[i + 1];
-        if (char === '"' && inQuotes && nextChar === '"') {
-          value += '"'; i++;
-        } else if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-          cells.push(value);
-          value = '';
-        } else {
-          value += char;
-        }
-      }
-      cells.push(value);
-      return cells.map(c => c.trim());
-    });
+function buildPayload(requireAllFields = false) {
+  const assignee = document.getElementById('assignee').value.trim();
+  const harvestTime = document.getElementById('harvestTime').value.trim();
+  const weight = document.getElementById('weight').value.trim();
+  const washPackTime = document.getElementById('washPackTime').value.trim();
+  const notes = document.getElementById('notes').value.trim();
 
-    const headers = rows.shift();
-    if (!headers || headers.length === 0) {
-      throw new Error("CSV headers are missing or empty. / Faltan encabezados CSV o están vacíos.");
-    }
-    console.log("CSV Headers: / Encabezados CSV:", headers);
+  if (requireAllFields && (!assignee || !harvestTime || !weight || !washPackTime)) {
+    alert("Please complete all required fields before marking as completed.");
+    return null;
+  }
 
-    const parsedTasks = rows.map((row, i) => {
-      const obj = {};
-      headers.forEach((h, j) => {
-        const key = h.trim();
-        let value = row[j] ? row[j].trim().replace(/^"|"$/g, '') : '';
-        if (key === 'Harvest Date') { // Assuming 'Harvest Date' header remains in English in CSV
-            value = normalizeDate(value);
-        }
-        if (key === 'Location') { // Assuming 'Location' header remains in English in CSV
-          obj[key] = value;
-          const matches = [...value.matchAll(/(\d+)(?:\s*\(([^)]+)\))?/g)];
-          obj['_parsedLocations'] = matches.flatMap(m => {
-            const primary = m[1];
-            const extras = m[2]?.split(',').map(x => x.trim()) || [];
-            return [primary, ...extras];
-          });
-        } else {
-          obj[key] = value;
-        }
-      });
-      obj._row = i + 2;
-      return obj;
-    });
+  const payload = {};
+  if (assignee) payload['Assignee(s)'] = assignee;
+  if (harvestTime) payload['Time to Harvest (min)'] = harvestTime;
+  if (weight) payload['Harvest Weight (kg)'] = weight;
+  if (washPackTime) payload['Time to Wash & Pack (mins)'] = washPackTime;
+  if (notes) payload['Field Crew Notes'] = notes;
 
-    console.log('All Parsed Tasks (before filter): / Todas las tareas analizadas (antes del filtro):', JSON.parse(JSON.stringify(parsedTasks)));
+  if (requireAllFields) {
+    payload['Status'] = 'Completed';
+    payload['Harvest Date'] = new Date().toISOString().split('T')[0]; // today
+  } else if (assignee) {
+    payload['Status'] = 'Assigned';
+  }
 
-    allTasks = parsedTasks.filter(row =>
-      row['Crop'] && // Assuming 'Crop' header remains in English
-      row['Harvest Date'] && // Assuming 'Harvest Date' header remains in English (and value is normalized date)
-      row['Harvest Date'] !== '' &&
-      (row['Status'] !== 'Completed') && // Assuming 'Status' header remains in English
-      !isNaN(parseFloat(row['Units to Harvest'])) && // Assuming 'Units to Harvest' header remains in English
-      parseFloat(row['Units to Harvest']) > 0
-    );
-
-    console.log('Filtered allTasks (excluding completed): / Tareas filtradas (excluyendo completadas):', JSON.parse(JSON.stringify(allTasks)));
-    
-    taskMap = {};
-    allTasks.forEach(t => {
-      taskMap[t._row] = t;
-    });
-
-    const event = new Event('tasksLoaded');
-    document.dispatchEvent(event);
-  })
-  .catch(error => {
-    console.error('Error fetching or parsing initial sheet data: / Error al obtener o analizar datos iniciales de la hoja:', error);
-    alert('Could not load harvest tasks. Error: ' + error.message + ' / No se pudieron cargar las tareas de cosecha. Error: ' + error.message);
-    const container = document.getElementById('task-list');
-    if (container) {
-        container.innerHTML = `<p style="color: red;">Error loading tasks: ${error.message}. Please try again later. / Error al cargar tareas: ${error.message}. Por favor, inténtalo de nuevo más tarde.</p>`;
-    }
-    allTasks = []; 
-    taskMap = {};
-    const event = new Event('tasksLoaded'); 
-    document.dispatchEvent(event);
-  });
+  return payload;
+}
 
 // --------------------
-// DOM READY BINDINGS
+// SEND PATCH TO SHEETBEST
+// --------------------
+function sendUpdate(payload) {
+  if (!currentRow || typeof currentRow._row === 'undefined') {
+    alert("Task data is incomplete.");
+    return;
+  }
+
+  const rowIndex = currentRow._row - 2;
+  const url = `${SHEETBEST_CONNECTION_URL}/${rowIndex}`;
+
+  fetch(url, {
+    method: 'PATCH',
+    mode: 'cors', // ✅ Required for browser-based SheetBest access
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(() => {
+      alert('Update successful!');
+      location.reload(); // Refresh to re-render summary list
+    })
+    .catch(error => {
+      console.error('Failed to update task:', error);
+      alert('Error updating task. Check console for details.');
+    });
+}
+
+// --------------------
+// PAGE LOAD & BUTTON EVENTS
 // --------------------
 document.addEventListener('DOMContentLoaded', () => {
   const dateInput = document.getElementById('date-selector');
@@ -201,116 +168,24 @@ document.addEventListener('DOMContentLoaded', () => {
     dateInput.value = today;
 
     document.addEventListener('tasksLoaded', () => {
-      console.log("Tasks loaded event received, attempting initial render for date: / Evento de tareas cargadas recibido, intentando renderizado inicial para la fecha:", dateInput.value);
-      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
-      const filteredTasks = tasksToFilter.filter(row => {
-          const normalizedRowDate = normalizeDate(row['Harvest Date']); // Assumes 'Harvest Date' header
-          return normalizedRowDate === dateInput.value;
-      });
-      renderTasks(filteredTasks);
+      const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === dateInput.value);
+      renderTasks(filtered);
     });
 
     dateInput.addEventListener('change', () => {
-      const selectedDate = dateInput.value;
-      console.log("Date changed to: / Fecha cambiada a:", selectedDate, "attempting to re-render. / intentando re-renderizar.");
-      const tasksToFilter = Array.isArray(allTasks) ? allTasks : [];
-      const filteredTasks = tasksToFilter.filter(row => {
-          const normalizedRowDate = normalizeDate(row['Harvest Date']); // Assumes 'Harvest Date' header
-          return normalizedRowDate === selectedDate;
-      });
-      renderTasks(filteredTasks);
+      const selected = dateInput.value;
+      const filtered = allTasks.filter(row => normalizeDate(row['Harvest Date']) === selected);
+      renderTasks(filtered);
     });
   }
 
-  const submit = document.getElementById('submit-btn');
-  if (submit) {
-    submit.addEventListener('click', () => {
-      if (!currentRow || typeof currentRow._row === 'undefined') {
-          console.error("Current row data is not available or _row is missing. / Datos de la fila actual no disponibles o falta _row.");
-          alert("Error: No task selected or task data is incomplete. / Error: Ninguna tarea seleccionada o datos de la tarea incompletos.");
-          return;
-      }
+  document.getElementById('update-btn')?.addEventListener('click', () => {
+    const payload = buildPayload(false);
+    if (payload) sendUpdate(payload);
+  });
 
-      const sheetBestRowIndex = currentRow._row - 2; 
-      if (sheetBestRowIndex < 0) {
-          console.error("Calculated invalid SheetBest row index: / Índice de fila de SheetBest inválido calculado:", sheetBestRowIndex, "from currentRow._row:", currentRow._row);
-          alert("Error: Invalid row index for update. / Error: Índice de fila inválido para la actualización.");
-          return;
-      }
-
-      const updateUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
-      console.log("Update URL for SheetBest: / URL de actualización para SheetBest:", updateUrl);
-
-      const harvestTimeValue = document.getElementById('harvestTime').value;
-      const weightValue = document.getElementById('weight').value;
-      const washPackTimeValue = document.getElementById('washPackTime').value;
-      const assigneeValue = document.getElementById('assignee').value;
-      const notesValue = document.getElementById('notes').value;
-
-      const dataToUpdate = {
-        // Keys here MUST EXACTLY MATCH your Google Sheet column headers that you want to update
-        'Assignee(s)': assigneeValue, // Assumes 'Assignee(s)' header in sheet
-        'Field Crew Notes': notesValue // Assumes 'Field Crew Notes' header in sheet
-      };
-
-      const isBeingCompleted = (harvestTimeValue && harvestTimeValue.trim() !== "") ||
-                              (weightValue && weightValue.trim() !== "") ||
-                              (washPackTimeValue && washPackTimeValue.trim() !== "");
-
-      if (isBeingCompleted) {
-        dataToUpdate['Time to Harvest (min)'] = harvestTimeValue; // Assumes 'Time to Harvest (min)' header
-        dataToUpdate['Harvest Weight (kg)'] = weightValue;     // Assumes 'Harvest Weight (kg)' header
-        dataToUpdate['Time to Wash & Pack (mins)'] = washPackTimeValue; // Assumes 'Time to Wash & Pack (mins)' header
-        dataToUpdate['Status'] = 'Completed';                       // Assumes 'Status' header
-        dataToUpdate['Harvest Date'] = new Date().toISOString();      // Assumes 'Harvest Date' header for completion timestamp
-      } else if (assigneeValue.trim() !== "") {
-        dataToUpdate['Status'] = 'Assigned';                        // Assumes 'Status' header
-      } else if (assigneeValue.trim() === "" && notesValue.trim() === "" && !isBeingCompleted) {
-        dataToUpdate['Status'] = '';                                // Assumes 'Status' header
-      }
-
-      console.log('Body being sent to SheetBest for PATCH: / Cuerpo enviado a SheetBest para PATCH:', JSON.stringify(dataToUpdate));
-
-      fetch(updateUrl, {
-        method: 'PATCH',
-        mode: 'cors',
-        headers: {
-          'Content-Type': 'application/json',
-          // 'X-Api-Key': 'YOUR_SHEETBEST_API_KEY' // If required
-        },
-        body: JSON.stringify(dataToUpdate)
-      })
-      .then(response => {
-        if (!response.ok) {
-          return response.json().catch(() => response.text()).then(errorData => {
-            let errorMessage = `HTTP error! Status: ${response.status}. / ¡Error HTTP! Estado: ${response.status}. `;
-            if (typeof errorData === 'string') {
-                errorMessage += `Response: ${errorData} / Respuesta: ${errorData}`;
-            } else if (errorData && (errorData.message || errorData.detail)) {
-                errorMessage += `Error: ${errorData.message || errorData.detail} / Error: ${errorData.message || errorData.detail}`;
-                if(errorData.errors) errorMessage += ` Details: ${JSON.stringify(errorData.errors)} / Detalles: ${JSON.stringify(errorData.errors)}`;
-            } else {
-                errorMessage += `Could not parse error response from SheetBest. Raw: ${JSON.stringify(errorData)} / No se pudo analizar la respuesta de error de SheetBest. Crudo: ${JSON.stringify(errorData)}`;
-            }
-            throw new Error(errorMessage);
-          });
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Successfully PATCHed row via SheetBest: / Fila PATCHADA con éxito vía SheetBest:', data);
-        alert('Task updated successfully via SheetBest! / ¡Tarea actualizada con éxito vía SheetBest!');
-        location.reload();
-      })
-      .catch(error => {
-        console.error('Error PATCHing row via SheetBest: / Error al PATCHAR fila vía SheetBest:', error);
-        alert('Failed to update task via SheetBest: ' + error.message + '\nCheck console for details. / Falló la actualización de la tarea vía SheetBest: ' + error.message + '\nConsultar consola para detalles.');
-      });
-    });
-  }
-
-  const cancelBtn = document.getElementById('cancel-btn');
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', closeForm);
-  }
+  document.getElementById('complete-btn')?.addEventListener('click', () => {
+    const payload = buildPayload(true);
+    if (payload) sendUpdate(payload);
+  });
 });
