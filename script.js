@@ -285,9 +285,18 @@ function handleSubmit(requireAllFields) {
       return response.json();
     })
     .then(() => {
-      alert('Task updated!');
-      location.reload();
+      const sheetBestRowIndex = currentRow._row - 2;
+      const fetchUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
+      return fetch(fetchUrl)
+        .then(res => res.json())
+        .then(([updatedRow]) => {
+          taskMap[currentRow._row] = updatedRow;
+          currentRow = updatedRow;
+          alert('Task updated!');
+          openForm(updatedRow._row); // Reopen the form with fresh data
+        });
     })
+
     .catch(error => {
       console.error('Update failed:', error);
       alert('Error updating task. See console.');
