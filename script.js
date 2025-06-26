@@ -2,7 +2,7 @@
 // CONFIGURATION
 // --------------------
 const SHEET_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTWgAxkAYCsHizO9zPI9j0QSfS7YEzak0PutaN1xBBGidYQJ108Ua2s_rqFfw8Jm_AbnUPGVcPoAhSy/pub?gid=0&single=true&output=csv';
-const SHEETBEST_CONNECTION_URL = 'https://api.sheetbest.com/sheets/9243a254-59b8-4906-addf-e097a076a76a'; // Keep your actual SheetBest URL
+const SHEETBEST_CONNECTION_URL = 'https://sheetdb.io/api/v1/ed2bgy6aj9vyv'; 
 
 let currentRow = null;
 let allTasks = []; // Correctly initialized
@@ -45,7 +45,7 @@ function renderTasks(tasksToRender) {
       <strong>${task['Crop'] || 'N/A'}</strong><br>
       <strong>Location / Ubicación:</strong> ${task['Location'] || '-'}<br>
       <strong>Quantity / Cantidad:</strong> ${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}<br>
-      <strong>Assigned To / Asignado a:</strong> ${task['Assignee(s)'] || 'Unassigned / Sin asignar'}<br>
+      <strong>Assigned To / Asignado a:</strong> ${task['Assignee'] || 'Unassigned / Sin asignar'}<br>
       <button onclick="openForm(${task._row || 0})">Open / Abrir</button>
     `;
     container.appendChild(div);
@@ -271,8 +271,9 @@ function handleSubmit(requireAllFields) {
     dataToUpdate['Status'] = 'Assigned';
   }
 
-  const sheetBestRowIndex = currentRow._row - 2;
-  const updateUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
+  const taskUID = currentRow['UID'];
+  const updateUrl = `${SHEETBEST_CONNECTION_URL}/UID/${encodeURIComponent(taskUID)}`;
+
 
   fetch(updateUrl, {
     method: 'PATCH',
@@ -285,8 +286,7 @@ function handleSubmit(requireAllFields) {
       return response.json();
     })
     .then(() => {
-      const sheetBestRowIndex = currentRow._row - 2;
-      const fetchUrl = `${SHEETBEST_CONNECTION_URL}/${sheetBestRowIndex}`;
+      const fetchUrl = `${SHEETBEST_CONNECTION_URL}/search?UID=${encodeURIComponent(taskUID)}`;
       return fetch(fetchUrl)
         .then(res => res.json())
         .then(([updatedRow]) => {
