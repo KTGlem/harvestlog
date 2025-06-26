@@ -45,7 +45,7 @@ function renderTasks(tasksToRender) {
       <strong>${task['Crop'] || 'N/A'}</strong><br>
       <strong>Location / Ubicación:</strong> ${task['Location'] || '-'}<br>
       <strong>Quantity / Cantidad:</strong> ${task['Units to Harvest'] || 'N/A'} ${task['Harvest Units'] || ''}<br>
-      <strong>Assigned To / Asignado a:</strong> ${task['Assignee'] || 'Unassigned / Sin asignar'}<br>
+      <strong>Assigned To / Asignado a:</strong> ${task['Assignee(s)'] || 'Unassigned / Sin asignar'}<br>
       <button onclick="openForm(${task._row || 0})">Open / Abrir</button>
     `;
     container.appendChild(div);
